@@ -21,7 +21,7 @@
 npx skills add betacircuit/snu_prelab_labreport_sogam_skills -g -s "*"
 ```
 
-**설치 없이 (저장소를 열 수 있는 AI면 아무거나)** — 새 대화에 붙여 넣고 마지막 줄에 요청을 적어요.
+**설치 없이 (저장소를 열 수 있는 AI면 아무거나)** — 새 대화에 붙여 넣고 마지막 줄에 요청을 적을 것.
 ```
 https://github.com/betacircuit/snu_prelab_labreport_sogam_skills 저장소의 스킬로 과제를 해 줘.
 저장소를 clone하고 AGENTS.md를 읽은 다음, 요청에 맞는 skills/<과목>/SKILL.md와 skills/snu-report-core/SKILL.md를 그대로 따라.
