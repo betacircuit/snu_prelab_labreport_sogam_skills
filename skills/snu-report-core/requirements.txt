@@ -1,0 +1,8 @@
+sympy
+schemdraw
+pyyaml
+python-docx
+matplotlib
+numpy
+openpyxl
+pymupdf

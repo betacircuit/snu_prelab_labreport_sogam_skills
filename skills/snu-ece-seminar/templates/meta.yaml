@@ -1,0 +1,5 @@
+week: 4                       # 주차
+lab_date: "2026-09-30"        # 강연일
+title: "강연 제목"
+speaker: "홍길동 교수 (서울대학교 전기정보공학부)"
+speaker_id: ""                # 교수 DB(data/professors.yaml)의 id (외부 연사면 비움)

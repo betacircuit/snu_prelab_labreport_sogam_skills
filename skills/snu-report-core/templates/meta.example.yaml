@@ -1,0 +1,8 @@
+lab: 3
+title: "[한국어 제목]"            # 제목 블록: "Lab 03 : 제목"
+title_en: "K-map & Multi-level, Multi-output logic"
+lab_date: "2026-10-06"
+prelab_due: "2026-10-04 23:59"   # 실험 전 일요일
+report_due: "2026-10-11 23:59"   # 실험 후 일요일
+scope: "슬라이드의 실험 범위·필수 문항 요약"
+parts: ["7400", "7408"]

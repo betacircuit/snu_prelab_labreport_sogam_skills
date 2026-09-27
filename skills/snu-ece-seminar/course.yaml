@@ -1,0 +1,7 @@
+# 전정세 강연 소감문 — 과목 기본값. 바꾸려면 작업 폴더의 courses/seminar/course.yaml에 같은 키로 적는다.
+key: seminar
+course: "전기정보공학세미나"     # 정식 과목명 확인 필요 — 제목 블록 첫 줄에 들어간다
+skill: snu-ece-seminar
+length: "A4 1쪽 (본문 약 900–1,200자)"
+filename:
+  sogam: "sogam{lab}_{student_id}_{name}"   # 제출 파일명 규칙 확인 필요 (예: 3주차 → sogam03_2025-12345_홍길동)

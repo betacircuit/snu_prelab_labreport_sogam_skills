@@ -1,0 +1,25 @@
+{
+  "name": "snu-ece-skills",
+  "owner": {
+    "name": "betacircuit"
+  },
+  "metadata": {
+    "description": "서울대 전기정보공학부 과제 스킬 — 논설실·회로이론 실험 prelab/결과보고서, 전정세 소감문 (.docx)",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "snu-reports",
+      "description": "논리설계 및 실험, 회로이론 및 실험의 prelab·결과보고서와 전정세 강연 소감문을 Word(.docx)로 작성한다. 처음 한 번 이름·학번·조만 묻는다.",
+      "version": "1.0.0",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/snu-report-core",
+        "./skills/snu-logic-lab",
+        "./skills/snu-circuit-lab",
+        "./skills/snu-ece-seminar"
+      ]
+    }
+  ]
+}

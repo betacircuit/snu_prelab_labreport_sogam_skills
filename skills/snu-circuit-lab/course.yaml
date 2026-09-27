@@ -1,0 +1,9 @@
+# 회로이론 및 실험 — 과목 기본값 (논설실과 같은 양식). 조·조원은 작업 폴더의 courses/circuit/course.yaml에 저장된다.
+key: circuit
+course: "회로이론 및 실험"
+skill: snu-circuit-lab
+team: ""
+teammates: []
+filename:
+  prelab: "prelab{lab}_{student_id}_{name}"
+  report: "lab{lab}_{student_id}_{name}"

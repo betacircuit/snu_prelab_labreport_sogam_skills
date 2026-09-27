@@ -1,0 +1,10 @@
+# 논리설계 및 실험 (논설실) — 과목 기본값. 조·조원은 작업 폴더의 courses/logic/course.yaml에 저장된다.
+key: logic
+course: "논리설계 및 실험"
+skill: snu-logic-lab
+team: ""            # 사용자마다 다름 (setup_profile.py가 묻고 저장)
+teammates: []
+# 제출 파일명 (Lab00 규칙, 틀리면 감점)
+filename:
+  prelab: "prelab{lab}_{student_id}_{name}"
+  report: "lab{lab}_{student_id}_{name}"

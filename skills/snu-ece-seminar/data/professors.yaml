@@ -1,0 +1,522 @@
+# 서울대학교 전기·정보공학부 전임교수 DB
+# 출처: 학부 홈페이지 전임교수 목록 https://ece.snu.ac.kr/research-faculty/faculty/full-time (2026-09-27 가져옴)
+# 항목: id(이름, 동명이인은 -B/-S), 이름, 직위, 연구 분야(홈페이지 표기 그대로), 연구실 홈페이지
+# 소감문에서는 연사 소개 한 줄에만 쓴다. 강연 내용의 근거로 쓰지 않는다.
+# 학기가 바뀌면 같은 페이지에서 다시 가져와 갱신한다. 새 항목(강연 주제, 인상 깊은 연구 등)은 자유롭게 추가해도 된다.
+updated: '2026-09-27'
+source: https://ece.snu.ac.kr/research-faculty/faculty/full-time
+count: 72
+professors:
+- id: 고형석
+  name: 고형석
+  position: 교수
+  fields:
+  - 컴퓨터 애니메이션
+  - 디지털액터
+  homepage: http://graphics.snu.ac.kr/~ko
+- id: 곽정훈
+  name: 곽정훈
+  position: 교수
+  fields:
+  - 퀀텀닷 디스플레이
+  - 유기반도체소자
+  - 소자물리
+  homepage: http://aone.snu.ac.kr
+- id: 권성훈
+  name: 권성훈
+  position: 교수
+  fields:
+  - 면역 데이터 분석
+  - 생체분자정보 생산 및 분석
+  - 딥러닝
+  homepage: http://binel.snu.ac.kr
+- id: 김남수
+  name: 김남수
+  position: 교수
+  fields:
+  - 인공지능
+  - 음성음향신호처리
+  homepage: http://hi.snu.ac.kr/
+- id: 김성재
+  name: 김성재
+  position: 교수
+  fields:
+  - 액체 반도체
+  - 바이오센서
+  - MEMS/NEMS
+  homepage: https://ees.snu.ac.kr
+- id: 김영민
+  name: 김영민
+  position: 부교수
+  fields:
+  - 3차원 비전
+  homepage: https://3d.snu.ac.kr/
+- id: 김장우
+  name: 김장우
+  position: 교수
+  fields:
+  - 컴퓨터 구조
+  - 시스템 설계
+  homepage: https://hpcs.snu.ac.kr/~jangwoo
+- id: 김재준
+  name: 김재준
+  position: 교수
+  fields:
+  - 디지털 집적 회로 및 시스템 설계
+  homepage: http://vlsi.snu.ac.kr
+- id: 김재하
+  name: 김재하
+  position: 교수
+  fields:
+  - 집적회로 설계 및 검증
+  homepage: https://mics.snu.ac.kr
+- id: 김진수
+  name: 김진수
+  position: 조교수
+  fields:
+  - 웨어러블 로봇
+  homepage: https://sites.google.com/snu.ac.kr/jkim
+- id: 김태환
+  name: 김태환
+  position: 교수
+  fields:
+  - 임베디드 시스템 설계
+  homepage: https://snucad.snu.ac.kr/~tkim
+- id: 남동욱
+  name: 남동욱
+  position: 부교수
+  fields:
+  - 광집적회로 및 양자기술
+  homepage: https://www.donguknam.com
+- id: 도재영
+  name: 도재영
+  position: 조교수
+  fields:
+  - 생성형 AI
+  - 머신러닝
+  - 자연어 처리
+  - 빅데이터/AI 시스템
+  - 차세대 메모리
+  homepage: https://aidas.snu.ac.kr/
+- id: 문수묵
+  name: 문수묵
+  position: 교수
+  fields:
+  - 컴파일러
+  - 가상머신
+  - 블록체인
+  - 연합학습
+  homepage: https://altair.snu.ac.kr/smoon
+- id: 문태섭
+  name: 문태섭
+  position: 교수
+  fields:
+  - 적응형 기계학습
+  - 신뢰가능 AI
+  - 데이터 응용
+  homepage: https://mindlab-snu.github.io
+- id: 박남규
+  name: 박남규
+  position: 교수
+  fields:
+  - 나노광학
+  - 메타물질
+  homepage: http://stargate.snu.ac.kr
+- id: 박세웅
+  name: 박세웅
+  position: 교수
+  fields:
+  - 네트워크 디자인 및 성능분석
+  homepage: https://sites.google.com/netlab.snu.ac.kr/netlabhome
+- id: 박재형
+  name: 박재형
+  position: 교수
+  fields:
+  - 홀로그래피
+  - AR/VR 디스플레이
+  - 3D
+  - 광공학
+  homepage: https://sites.google.com/view/3doelab
+- id: 박준석
+  name: 박준석
+  position: 조교수
+  fields:
+  - 디지털 집적 회로 및 시스템 설계
+  homepage: https://sites.google.com/snu.ac.kr/soc
+- id: 백윤흥
+  name: 백윤흥
+  position: 교수
+  fields:
+  - 소프트웨어와 시스템의 보안
+  - 보안을 위한 하드웨어
+  - 지능형 보안
+  - AI의 보안
+  homepage: http://sor.snu.ac.kr
+- id: 서승우
+  name: 서승우
+  position: 교수
+  fields:
+  - 지능형 자동차
+  - 정보보안
+  - 로보틱스
+  homepage: http://vi.snu.ac.kr
+- id: 서종모
+  name: 서종모
+  position: 교수
+  fields:
+  - 신경접속
+  - 의공학
+  homepage: http://efe.snu.ac.kr
+- id: 서지원
+  name: 서지원
+  position: 부교수
+  fields:
+  - 머신러닝 시스템
+  - 생성형 AI (LLM) 최적화
+  - 빅데이터 시스템
+  homepage: https://mlsys.snu.ac.kr
+- id: 신종원
+  name: 신종원
+  position: 부교수
+  fields:
+  - 전력전자 및 전력변환 시스템
+  homepage: https://pesl.snu.ac.kr/
+- id: 신형철
+  name: 신형철
+  position: 교수
+  fields:
+  - 반도체 소자 및 회로
+  homepage: http://snudrl.snu.ac.kr
+- id: 심규석
+  name: 심규석
+  position: 교수
+  fields:
+  - 데이타마이닝 및 데이터베이스
+  homepage: http://kdd.snu.ac.kr/~shim
+- id: 심병효
+  name: 심병효
+  position: 교수
+  fields:
+  - 이동통신
+  - 인공지능
+  - 신호처리
+  homepage: https://isl.snu.ac.kr/
+- id: 심재웅
+  name: 심재웅
+  position: 부교수
+  fields:
+  - 컴퓨터 구조 및 시스템
+  homepage: https://comparch.snu.ac.kr
+- id: 심형보
+  name: 심형보
+  position: 교수
+  fields:
+  - 제어이론
+  - 동적시스템
+  homepage: https://hyungbo.github.io
+- id: 양인순
+  name: 양인순
+  position: 교수
+  fields:
+  - 학습 및 의사결정 시스템
+  homepage: https://lds-insoon.github.io/
+- id: 양현종
+  name: 양현종
+  position: 부교수
+  fields:
+  - 통신 시스템
+  - 분산 학습 시스템
+  - 커넥티드 로보틱스
+  homepage: https://aislab.snu.ac.kr/
+- id: 오성회
+  name: 오성회
+  position: 교수
+  fields:
+  - 로봇학습
+  homepage: http://rllab.snu.ac.kr
+- id: 오정석
+  name: 오정석
+  position: 교수
+  fields:
+  - 메타표면
+  - 안테나
+  - RF회로 및 시스템
+  homepage: http://wfl.snu.ac.kr
+- id: 유담
+  name: 유담
+  position: 교수
+  fields:
+  - 집적회로
+  - 바이오메디컬 및 초음파 시스템
+  - 머신러닝
+  homepage: https://www.jeraldyoo.com
+- id: 유선규
+  name: 유선규
+  position: 부교수
+  fields:
+  - 광자 컴퓨팅/AI
+  - 무질서 광학
+  - 양자 광학
+  homepage: http://waves.snu.ac.kr
+- id: 윤상원
+  name: 윤상원
+  position: 교수
+  fields:
+  - 반도체 패키지
+  - 모빌리티 전자부품
+  homepage: https://sites.google.com/view/smeetsnu
+- id: 윤성로
+  name: 윤성로
+  position: 교수
+  fields:
+  - 인공지능 (Physical AI
+  - 생성형 AI
+  - LLM
+  - AGI)
+  homepage: http://ailab.snu.ac.kr/
+- id: 윤용태
+  name: 윤용태
+  position: 교수
+  fields:
+  - 전력경제
+  homepage: https://golden-jar-b92.notion.site/snu-electric-power-network-economics-laboratory-epnel
+- id: 이경무
+  name: 이경무
+  position: 교수
+  fields:
+  - 컴퓨터 비젼
+  - 인공지능
+  - 머신러닝
+  - 영상처리
+  homepage: http://cv.snu.ac.kr/kmlee
+- id: 이경한
+  name: 이경한
+  position: 교수
+  fields:
+  - 네트워크 시스템
+  - 네트워크 컴퓨팅 아키텍처
+  - Connected AI
+  - AI-RAN
+  - 6G
+  homepage: https://nxc.snu.ac.kr
+- id: 이규섭
+  name: 이규섭
+  position: 부교수
+  fields:
+  - 전력계통
+  homepage: http://sites.google.com/view/snupsl
+- id: 이병영
+  name: 이병영
+  position: 교수
+  fields:
+  - 컴퓨터 보안
+  - 소프트웨어 및 운영체제 보안
+  homepage: https://lifeasageek.github.io/
+- id: 이성욱
+  name: 이성욱
+  position: 조교수
+  fields:
+  - 무선 통신
+  - 전파 신호 처리
+  - 인공지능
+  - 차량용 센서
+  homepage: https://artl.snu.ac.kr/
+- id: 이수연
+  name: 이수연
+  position: 부교수
+  fields:
+  - 차세대 박막소자 및 회로 연구
+  homepage: https://sites.google.com/view/snu-acelab/home
+- id: 이재상
+  name: 이재상
+  position: 부교수
+  fields:
+  - 반도체 광전소자 물리 및 공정
+  - 생성형 AI 기반 설계
+  homepage: https://sites.google.com/view/snu-idsl/home
+- id: 이정우
+  name: 이정우
+  position: 교수
+  fields:
+  - 머신러닝
+  - 통신이론
+  homepage: http://cml.snu.ac.kr
+- id: 이종호-B
+  name: 이종호
+  position: 교수
+  fields:
+  - 영상과학
+  - 바이오메디컬 영상 AI
+  homepage: http://list.snu.ac.kr
+  note: '동명이인 구분: 학부 홈페이지 표기 이종호 (B)'
+- id: 이종호-S
+  name: 이종호
+  position: 교수
+  fields:
+  - 반도체 재료 및 소자
+  homepage: https://genie.snu.ac.kr/
+  note: '동명이인 구분: 학부 홈페이지 표기 이종호 (S)'
+- id: 이진규
+  name: 이진규
+  position: 조교수
+  fields:
+  - 제어이론
+  - 동적시스템
+  homepage: https://jingyulee92.wordpress.com/
+- id: 이진호
+  name: 이진호
+  position: 부교수
+  fields:
+  - 인공지능 시스템 및 최적화
+  - 컴퓨터 구조
+  homepage: https://aisys.snu.ac.kr/
+- id: 이철호
+  name: 이철호
+  position: 교수
+  fields:
+  - 차세대 반도체 소자 및 재료
+  homepage: https://sites.google.com/view/leegroupinsnu
+- id: 이혁재
+  name: 이혁재
+  position: 교수
+  fields:
+  - 컴퓨터구조 및 병렬처리
+  homepage: http://capp.snu.ac.kr
+- id: 이현주
+  name: 이현주
+  position: 교수
+  fields:
+  - 바이오메디컬 소자
+  - MEMS
+  - 뇌기계인터페이스
+  homepage: http://bmm-lab.com
+- id: 전세영
+  name: 전세영
+  position: 교수
+  fields:
+  - 신호처리
+  - 계산영상
+  homepage: https://icl.snu.ac.kr/
+- id: 정교민
+  name: 정교민
+  position: 교수
+  fields:
+  - 머신러닝
+  - 딥 러닝
+  - 자연어 처리
+  homepage: http://milab.snu.ac.kr
+- id: 정규원
+  name: 정규원
+  position: 조교수
+  fields:
+  - 반도체 소자
+  homepage: https://sdla.snu.ac.kr/
+- id: 정윤찬
+  name: 정윤찬
+  position: 교수
+  fields:
+  - 레이저 및 양자전자
+  homepage: http://laser.snu.ac.kr
+- id: 조남익
+  name: 조남익
+  position: 교수
+  fields:
+  - 디지털신호
+  - 영상/비디오
+  homepage: http://ispl.snu.ac.kr
+- id: 최성휘
+  name: 최성휘
+  position: 부교수
+  fields:
+  - 전력변환시스템
+  homepage: https://pcsl.snu.ac.kr/
+- id: 최완
+  name: 최완
+  position: 교수
+  fields:
+  - 무선통신
+  - 기계학습
+  - 신호처리
+  - 정보이론
+  homepage: http://wcisl.snu.ac.kr
+- id: 최우석
+  name: 최우석
+  position: 부교수
+  fields:
+  - 집적회로 및 시스템 설계
+  homepage: https://sites.google.com/view/wschoi
+- id: 최우열
+  name: 최우열
+  position: 부교수
+  fields:
+  - 초고주파 집적 회로 설계 및 계측
+  homepage: https://www.wchoi.net
+- id: 최우영
+  name: 최우영
+  position: 교수
+  fields:
+  - 반도체 소자
+  homepage: https://sites.google.com/view/snutidl
+- id: 최재혁
+  name: 최재혁
+  position: 교수
+  fields:
+  - 반도체회로 및 시스템 설계
+  homepage: https://icsl.snu.ac.kr
+- id: 최종현
+  name: 최종현
+  position: 부교수
+  fields:
+  - 컴퓨터 비전
+  - 머신러닝
+  - 멀티모달 AI
+  - 자연어 처리
+  homepage: https://ppolon.github.io
+- id: 최준원
+  name: 최준원
+  position: 교수
+  fields:
+  - 인공지능
+  - 로봇인지
+  - 자율주행
+  - 센서신호처리
+  homepage: http://adr.snu.ac.kr
+- id: 하정익
+  name: 하정익
+  position: 교수
+  fields:
+  - 전력 전자 및 전기에너지 변환
+  homepage: http://eecl.snu.ac.kr
+- id: 한보형
+  name: 한보형
+  position: 교수
+  fields:
+  - Computer Vision
+  - Machine Learning
+  - Deep Learning
+  homepage: http://cvlab.snu.ac.kr/~bhhan
+- id: 한승용
+  name: 한승용
+  position: 교수
+  fields:
+  - 초전도 응용 기기
+  homepage: http://asl.snu.ac.kr
+- id: 홍성수
+  name: 홍성수
+  position: 교수
+  fields:
+  - 실시간시스템
+  - 미들웨어
+  homepage: http://redwood.snu.ac.kr/
+- id: 홍성완
+  name: 홍성완
+  position: 부교수
+  fields:
+  - 반도체 집적회로 및 시스템 설계
+  homepage: https://sites.google.com/view/apcs-lab
+- id: 홍용택
+  name: 홍용택
+  position: 교수
+  fields:
+  - 유연성/신축성 전자 소자 및 회로
+  homepage: http://axel.snu.ac.kr
