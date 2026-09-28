@@ -1,0 +1,8 @@
+# 기초전자기학 및 연습 — 과목 기본값. 바꾸려면 작업 폴더의 courses/em/course.yaml에 같은 키로 적는다.
+key: em
+course: "기초전자기학 및 연습"
+skill: snu-em-hw
+unit: hw                 # 작업 폴더가 courses/em/hw01/ 꼴 (자료 파일명·내용의 HW 번호로 분류)
+filename:
+  hw: "HW{lab_num}_{name}_{student_id}"   # 보고서 PDF와 압축 파일 이름 (예: HW1_홍길동_2025-12345)
+code: "HW{lab_num}.m"                      # 같이 내는 MATLAB 파일 이름

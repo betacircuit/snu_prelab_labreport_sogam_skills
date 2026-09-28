@@ -79,6 +79,12 @@ _KNOWN = {
                 Path("C:/Program Files/LTC/LTspiceXVII/XVIIx64.exe"),
                 Path("/Applications/LTspice.app/Contents/MacOS/LTspice")],
     "ltspice-mcp": [_HOME / ".local/bin/ltspice-mcp.exe", _HOME / ".local/bin/ltspice-mcp"],
+    # MATLAB·Octave는 버전 폴더가 붙어서 * 패턴으로 찾는다 (새 버전이 앞)
+    "matlab": ["C:/Program Files/MATLAB/R20*/bin/matlab.exe", "/Applications/MATLAB_R20*.app/bin/matlab",
+               "/usr/local/MATLAB/R20*/bin/matlab"],
+    "octave-cli": [str(_LOCAL / "Programs/GNU Octave/Octave-*/mingw64/bin/octave-cli.exe"),
+                   "C:/Program Files/GNU Octave/Octave-*/mingw64/bin/octave-cli.exe",
+                   "/opt/homebrew/bin/octave-cli", "/usr/local/bin/octave-cli", "/Applications/Octave-*.app/Contents/Resources/usr/bin/octave-cli"],
 }
 
 
@@ -93,7 +99,12 @@ def find_tool(name: str) -> str | None:
         hit = shutil.which(name)
         if hit:
             return hit
+    import glob
     for p in _KNOWN.get(name, []):
-        if p.exists():
+        if "*" in str(p):
+            hits = sorted(glob.glob(str(p)), reverse=True)
+            if hits:
+                return hits[0]
+        elif Path(p).exists():
             return str(p)
     return None

@@ -5,7 +5,7 @@
 
 ## 1. 확인
 ```bash
-python $E/setup_profile.py --check --course <과목>   # logic, circuit, seminar
+python $E/setup_profile.py --check --course <과목>   # logic, circuit, seminar, em
 ```
 `ok`가 나오면 바로 작업한다.
 - `need:` 줄은 묻지 않고 처리한다.
