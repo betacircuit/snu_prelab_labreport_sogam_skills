@@ -10,6 +10,22 @@
 
 ## 설치
 
+**PC에 한 번에 설치 (추천)** — Claude Code나 Codex를 열고 아래를 그대로 붙여 넣을 것. 스킬, 파이썬 패키지, pandoc, LTspice, LTspice MCP까지 AI가 알아서 설치하고 등록한다.
+```
+아래 저장소의 과제 스킬을 이 컴퓨터에 설치하고, 필요한 프로그램도 전부 설치해 줘. 설치 명령은 네가 직접 실행해.
+1. git clone --depth 1 https://github.com/betacircuit/snu_prelab_labreport_sogam_skills ~/.snu-skills
+   (이미 있으면 git -C ~/.snu-skills pull)
+2. python ~/.snu-skills/skills/snu-report-core/scripts/bootstrap.py --yes
+   - python이 안 되면 py -3로. 둘 다 없으면 Python부터 설치해 (Windows: winget install -e --id Python.Python.3.12, macOS: brew install python).
+   - 관리자 권한 창이 뜨면 나한테 "예"를 누르라고 말해.
+   - ✗가 나온 단계는 출력을 보고 원인을 고친 뒤 다시 돌려. 같은 이유로 두 번 실패하면 멈추고 알려 줘.
+3. python ~/.snu-skills/skills/snu-report-core/scripts/bootstrap.py --check 결과가 ok인지 확인해.
+4. 검증: python ~/.snu-skills/skills/snu-report-core/scripts/spice.py run ~/.snu-skills/skills/snu-circuit-lab/examples/rc_step.cir
+   → v1ms가 3.16 V 근처면 성공. LTspice로 돌았는지 ngspice로 돌았는지도 알려 줘.
+5. 끝나면 설치된 것, 안 된 것과 이유, 내가 할 일(앱 재시작 등)만 짧게 알려 줘.
+```
+끝나면 Claude Code·Codex를 새로 시작하고 과제 폴더에서 요청하면 된다.
+
 **Claude Code**
 ```
 /plugin marketplace add betacircuit/snu_prelab_labreport_sogam_skills

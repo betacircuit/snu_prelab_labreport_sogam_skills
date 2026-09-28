@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import importlib.util
 import re
@@ -21,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ws import ENGINE, course_config, course_defaults, find_workspace, known_courses, remember_engine  # noqa: E402
+from ws import ENGINE, course_config, course_defaults, find_tool, find_workspace, known_courses, remember_engine  # noqa: E402
 
 ID_RE = re.compile(r"^\d{4}-\d{5}$")
 NAME_RE = re.compile(r"^[가-힣A-Za-z]{2,20}$")
@@ -72,15 +73,18 @@ def empty(v) -> bool:
     return v is None or (isinstance(v, str) and (not v.strip() or v.strip().startswith("["))) or v == []
 
 
-def check_deps() -> list[str]:
+BOOT = 'python "' + str(ENGINE / "bootstrap.py") + '" --yes --deps-only'
+
+
+def check_deps(course: str | None = None) -> list[str]:
     need = []
     miss = [pkg for mod, pkg in PY_MODULES.items() if importlib.util.find_spec(mod) is None]
     if miss:
-        need.append(f"need: python 패키지 {', '.join(miss)} — pip install -r \"{REQUIREMENTS}\""
-                    " (시스템 Python이 막으면 --break-system-packages 또는 --user)")
-    if not shutil.which("pandoc"):
-        need.append("need: pandoc — docx 변환에 필요. Windows: winget install JohnMacFarlane.Pandoc,"
-                    " macOS: brew install pandoc, Linux: apt-get install pandoc")
+        need.append(f"need: python 패키지 {', '.join(miss)} — {BOOT}")
+    if not find_tool("pandoc"):
+        need.append(f"need: pandoc (docx 변환) — {BOOT}")
+    if course == "circuit" and not (find_tool("ltspice") or find_tool("ngspice")):
+        need.append(f"need: SPICE 시뮬레이터 (Windows·macOS는 LTspice, Linux는 ngspice) — {BOOT}")
     return need
 
 
@@ -103,10 +107,7 @@ def init_workspace(root: Path) -> Path:
 
 
 def check(root: Path | None, course: str | None) -> list[str]:
-    out = check_deps()
-    if course == "circuit" and not shutil.which("ngspice"):
-        out.append("need: ngspice — 넷리스트 검증용 (spice.py). Linux: apt-get install ngspice, macOS: brew install ngspice,"
-                   " Windows: https://ngspice.sourceforge.io/download.html (LTspice 실행·캡처는 references/ltspice.md)")
+    out = check_deps(course)
     if root is None:
         cwd = Path.cwd().resolve()
         where = "현재 폴더가 홈 폴더 자체라 ~/snu-reports를 만들어 거기서" if cwd == Path.home().resolve() else f"현재 폴더({cwd})를"

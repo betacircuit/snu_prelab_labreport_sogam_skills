@@ -2,7 +2,7 @@
 """SPICE 넷리스트 검사·실행·그래프 — LTspice에서도 ngspice에서도 그대로 돌아가는 파일만 넘기기 위해.
 
   python spice.py lint  circuit.cir                         # LTspice·ngspice 공통 문법 검사
-  python spice.py run   circuit.cir                         # ngspice로 실행 → circuit.raw, .meas 결과 출력
+  python spice.py run   circuit.cir                         # 실행 → circuit.raw, .meas 결과 (LTspice가 있으면 LTspice, 없으면 ngspice)
   python spice.py plot  circuit.raw -t "v(in),v(out)" -o figs/tran.png     # 과도 응답 (흑백)
   python spice.py plot  circuit.raw -t "v(out)" -o figs/bode.png --bode    # AC: 크기(dB)·위상
   python spice.py value circuit.raw -t "v(out)" --at 1m                   # 한 시점(주파수)의 값
@@ -13,6 +13,7 @@ raw 파일은 ngspice가 만든 것과 LTspice가 만든 것 모두 읽는다 (s
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import re
 import shutil
@@ -120,11 +121,19 @@ def lint(path: Path) -> list[str]:
     return issues
 
 
-def run(path: Path) -> Path:
-    exe = shutil.which("ngspice")
+def run(path: Path, sim: str = "auto") -> Path:
+    """sim: auto(LTspice가 깔려 있으면 LTspice, 아니면 ngspice), ltspice, ngspice"""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from ws import find_tool
+    lt, ng = find_tool("ltspice"), find_tool("ngspice")
+    if sim == "ltspice" or (sim == "auto" and lt):
+        if not lt:
+            sys.exit("✗ LTspice 없음 — python bootstrap.py --yes 로 설치 (Windows·macOS)")
+        return run_ltspice(path, lt)
+    exe = ng
     if not exe:
-        sys.exit("✗ ngspice 없음 — Linux: apt-get install ngspice, macOS: brew install ngspice, "
-                 "Windows: https://ngspice.sourceforge.io/download.html")
+        sys.exit("✗ SPICE 시뮬레이터 없음 — python bootstrap.py --yes 로 설치한다 "
+                 "(Windows·macOS는 LTspice, Linux는 ngspice)")
     raw = path.with_suffix(".raw").resolve()
     log = path.with_suffix(".log")
     # 원본은 그대로 두고, 실행용 사본에 control 블록을 붙여 .meas 출력과 raw 저장을 한 번에 한다
@@ -135,7 +144,7 @@ def run(path: Path) -> Path:
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td) / path.name
         tmp.write_text(body + "\n" + control + ".end\n", encoding="utf-8")
-        r = subprocess.run([exe, "-b", str(tmp)], capture_output=True, text=True, cwd=path.resolve().parent)
+        r = subprocess.run([exe, "-b", str(tmp)], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=path.resolve().parent)
     out = r.stdout + r.stderr
     log.write_text(out, encoding="utf-8")
     if raw.exists():   # write 명령은 변수 줄의 'grid=3' 앞을 공백으로 써서 spicelib가 축을 못 찾는다 → 탭으로
@@ -205,6 +214,43 @@ def _read_ngspice(path: Path) -> Raw:
         arr = np.frombuffer(body, dtype=np.complex128 if cplx else np.float64, count=npts * nvar).reshape(npts, nvar)
     cols = {n: arr[:, i] for i, n in enumerate(names)}
     return Raw(names, np.abs(arr[:, 0].real), cols)
+
+
+def run_ltspice(path: Path, exe: str) -> Path:
+    """LTspice 배치 실행: LTspice -Run -b file.cir → file.raw, file.log (spicelib가 경로·옵션을 맞춘다)."""
+    import subprocess as sp
+    from spicelib.log.ltsteps import LTSpiceLogReader
+    path = path.resolve()
+    raw, log = path.with_suffix(".raw"), path.with_suffix(".log")
+    for f in (raw, log):
+        f.unlink(missing_ok=True)
+    cmd = [exe, "-b", str(path)] if sys.platform == "darwin" else [exe, "-Run", "-b", str(path)]
+    try:
+        sp.run(cmd, cwd=path.parent, timeout=300, capture_output=True)
+    except sp.TimeoutExpired:
+        sys.exit("✗ LTspice가 5분 안에 끝나지 않음 — 분석 시간(.tran)이나 스텝을 줄인다")
+    text = ""
+    if log.exists():
+        data = log.read_bytes()
+        text = data.decode("utf-16-le", errors="replace") if data[1:2] == b"\x00" else data.decode("utf-8", errors="replace")
+    errs = [ln.strip() for ln in text.splitlines()
+            if re.search(r"(?i)\berror\b|singular matrix|unknown (subcircuit|model)|time step too small|can't find", ln)]
+    if errs or not raw.exists():
+        print("✗ LTspice 실패:", *(errs[:8] or ["raw 파일이 생기지 않음"]), f"(로그: {log})", sep="\n  ")
+        sys.exit(1)
+    print(f"✓ {raw}  (LTspice)")
+    print("  신호:", ", ".join(read_raw(raw).get_trace_names()))
+    try:
+        lr = LTSpiceLogReader(str(log))
+        for name in lr.get_measure_names():
+            print(f"  .meas {name} = {lr.get_measure_value(name)}")
+    except Exception as e:   # .meas가 없거나 로그 형식이 다르면 그대로 보여 준다
+        meas = [ln.strip() for ln in text.splitlines() if re.match(r"^\w+:\s", ln)]
+        for m in meas:
+            print("  .meas", m)
+        if not meas and ".meas" in path.read_text(encoding="utf-8", errors="replace").lower():
+            print(f"  (.meas 결과를 읽지 못함: {e} — 로그 {log}를 직접 본다)")
+    return raw
 
 
 def read_raw(path: Path) -> Raw:
@@ -320,6 +366,8 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("lint"); p.add_argument("cir", type=Path)
     p = sub.add_parser("run"); p.add_argument("cir", type=Path)
+    p.add_argument("--sim", choices=["auto", "ltspice", "ngspice"], default="auto",
+                   help="auto: LTspice가 깔려 있으면 LTspice, 아니면 ngspice")
     p = sub.add_parser("plot"); p.add_argument("raw", type=Path); p.add_argument("-t", "--traces", required=True)
     p.add_argument("-o", "--out", type=Path, required=True); p.add_argument("--bode", action="store_true")
     p.add_argument("--xlabel"); p.add_argument("--title")
@@ -336,7 +384,7 @@ def main():
         if issues:
             print("\n".join(f"⚠ {i}" for i in issues))
             sys.exit("✗ lint부터 고친다")
-        run(a.cir)
+        run(a.cir, a.sim)
     elif a.cmd == "nodes":
         nodes(a.cir)
     elif a.cmd == "plot":

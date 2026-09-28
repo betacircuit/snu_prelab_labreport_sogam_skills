@@ -15,6 +15,7 @@ measured.json 은 실험 후 '본인이 관찰한 값'만 넣는다. 비워 둔 
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import json
 from pathlib import Path

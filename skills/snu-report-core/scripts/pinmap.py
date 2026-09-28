@@ -14,6 +14,7 @@ netlist.yaml 형식 (logic.py netlist 가 생성):
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import itertools
 from collections import defaultdict

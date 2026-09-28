@@ -82,6 +82,7 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 ## 스크립트 (`$E/`)
 | 스크립트 | 하는 일 |
 |---|---|
+| `bootstrap.py` | 필요한 것 한 번에 설치: 파이썬 패키지, pandoc, LTspice·ngspice, LTspice MCP와 앱 등록(Claude Code, Codex, Claude 앱), 스킬 등록. `--check`, `--deps-only`, `--dry-run` |
 | `setup_profile.py` | 준비 확인(`--check`: 패키지, 작업 폴더, 빠진 정보), 작업 폴더 만들기(`--init`), 사용자 정보 저장 |
 | `ingest.py` | 자료 자동 분류 (`inbox/<과목>/` → `courses/<과목>/`), 중복 제거, 텍스트 추출, meta·requirements 초안 |
 | `evidence.py` | 근거표 검사, 평균·계산값, xlsx 셀 덤프 |
@@ -107,7 +108,7 @@ ENGINE = next(e for e in (ROOT / "skills/snu-report-core/scripts",
 sys.path.insert(0, str(ENGINE))
 ```
 
-설치: `pip install -r <이 폴더>/requirements.txt`, `pandoc`. 선택: LibreOffice(미리보기 PDF, `libreoffice-math` 포함), `pdftotext`. `setup_profile.py --check`가 빠진 것을 알려 준다.
+설치: `python $E/bootstrap.py --yes`가 OS에 맞게 다 깐다 (Windows winget, macOS Homebrew, Linux apt). `setup_profile.py --check`가 빠진 것을 알려 준다. 미리보기 PDF용 LibreOffice는 `--preview`.
 
 ## 원고 문법
 | 쓰는 법 | 결과 |

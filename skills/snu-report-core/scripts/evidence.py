@@ -16,6 +16,7 @@ formula 에서 쓸 수 있는 것: mean(Dxx) min(Dxx) max(Dxx) n(Dxx) vals(Dxx)[
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import math
 import re

@@ -20,6 +20,7 @@ spec.yaml 예:
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import json
 from pathlib import Path
@@ -114,9 +115,9 @@ def main():
     draw(sig, spec, a.out)
     if a.json:
         p = Path(a.json)
-        data = json.loads(p.read_text()) if p.exists() else {}
+        data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
         data.setdefault("waveforms", {}).update({k: v for k, v in sig.items()})
-        p.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         print("✓", p)
 
 

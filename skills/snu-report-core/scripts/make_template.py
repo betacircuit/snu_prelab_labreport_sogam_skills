@@ -9,8 +9,10 @@ build.py 가 문서마다 이 함수를 호출해서 머리말에 주차/제목�
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -22,6 +24,8 @@ from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ws import find_tool  # noqa: E402
 TEMPLATES = HERE.parent / "templates"
 
 
@@ -223,7 +227,7 @@ def build_reference(style_path: Path, out: Path, vars: dict | None = None) -> Pa
         base = Path(td) / "default.docx"
         with open(base, "wb") as fh:
             subprocess.run(
-                ["pandoc", "--print-default-data-file", "reference.docx"], stdout=fh, check=True
+                [find_tool("pandoc") or "pandoc", "--print-default-data-file", "reference.docx"], stdout=fh, check=True
             )
         doc = Document(base)
 

@@ -62,3 +62,38 @@ def remember_engine(ws: Path | None):
             p.write_text(str(ENGINE) + "\n", encoding="utf-8")
     except OSError:
         pass
+
+
+# ───────── 외부 프로그램 찾기 ─────────
+# 방금 설치한 프로그램은 PATH가 바로 갱신되지 않는다 (특히 Windows winget). 알려진 설치 위치도 본다.
+_HOME = Path.home()
+_LOCAL = Path(__import__("os").environ.get("LOCALAPPDATA", _HOME / "AppData/Local"))
+_KNOWN = {
+    "pandoc": [_LOCAL / "Pandoc/pandoc.exe", Path("C:/Program Files/Pandoc/pandoc.exe"),
+               Path("/opt/homebrew/bin/pandoc"), Path("/usr/local/bin/pandoc")],
+    "soffice": [Path("C:/Program Files/LibreOffice/program/soffice.exe"),
+                Path("/Applications/LibreOffice.app/Contents/MacOS/soffice")],
+    "ngspice": [Path("/opt/homebrew/bin/ngspice"), Path("/usr/local/bin/ngspice"),
+                _HOME / ".local/ngspice/Spice64/bin/ngspice_con.exe", Path("C:/Spice64/bin/ngspice_con.exe")],
+    "ltspice": [_LOCAL / "Programs/ADI/LTspice/LTspice.exe", Path("C:/Program Files/ADI/LTspice/LTspice.exe"),
+                Path("C:/Program Files/LTC/LTspiceXVII/XVIIx64.exe"),
+                Path("/Applications/LTspice.app/Contents/MacOS/LTspice")],
+    "ltspice-mcp": [_HOME / ".local/bin/ltspice-mcp.exe", _HOME / ".local/bin/ltspice-mcp"],
+}
+
+
+def find_tool(name: str) -> str | None:
+    """PATH → 알려진 설치 위치 순서로 찾는다. 환경 변수 SNU_<NAME>(예: SNU_PANDOC)이 있으면 그걸 쓴다."""
+    import os
+    import shutil
+    env = os.environ.get("SNU_" + name.upper().replace("-", "_"))
+    if env and Path(env).exists():
+        return env
+    if name != "ltspice":
+        hit = shutil.which(name)
+        if hit:
+            return hit
+    for p in _KNOWN.get(name, []):
+        if p.exists():
+            return str(p)
+    return None

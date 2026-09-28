@@ -25,6 +25,7 @@ Lab NN 자료가 새로 들어오면 courses/<과목>/labNN/meta.yaml, requireme
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import datetime as dt
 import hashlib
@@ -38,7 +39,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ws import find_workspace, known_courses, remember_engine  # noqa: E402
+from ws import find_tool, find_workspace, known_courses, remember_engine  # noqa: E402
 
 PROFILE: dict = {}
 UPLOAD_PREFIX = re.compile(r"^[0-9a-f]{8}-")  # claude 업로드가 붙이는 접두어
@@ -124,8 +125,17 @@ def classify(path: Path, forced_lab: str | None):
 
 
 def pdf_text(p: Path):
-    if p.suffix.lower() == ".pdf" and shutil.which("pdftotext"):
-        subprocess.run(["pdftotext", "-layout", str(p), str(p.with_suffix(".txt"))], check=False)
+    if p.suffix.lower() != ".pdf":
+        return
+    if find_tool("pdftotext"):
+        subprocess.run([find_tool("pdftotext"), "-layout", str(p), str(p.with_suffix(".txt"))], check=False)
+        return
+    try:   # pdftotext가 없으면 (Windows 등) pymupdf로
+        import pymupdf
+        with pymupdf.open(str(p)) as doc:
+            p.with_suffix(".txt").write_text("\n\f".join(pg.get_text() for pg in doc), encoding="utf-8")
+    except Exception as e:
+        print(f"  (텍스트 추출 실패: {p.name}: {e})")
 
 
 def dest_dir(croot: Path, lab: str, sub: str) -> Path:
@@ -240,7 +250,7 @@ def process(root: Path, course: str, files: list[Path], from_inbox: bool, forced
     if not dry:
         croot.mkdir(parents=True, exist_ok=True)
     reg_p = croot / ".ingest.json"
-    reg = json.loads(reg_p.read_text()) if reg_p.exists() else {}
+    reg = json.loads(reg_p.read_text(encoding="utf-8")) if reg_p.exists() else {}
     touched_labs = set()
     seen = {}
     print(f"[{course}]")

@@ -13,7 +13,8 @@
 
 ## 시작할 때
 `python skills/snu-report-core/scripts/setup_profile.py --check --course <logic|circuit|seminar>`
-- `need:` 줄은 묻지 않고 처리한다 (패키지 설치, `--init`으로 작업 폴더 만들기).
+- `need:` 줄은 묻지 않고 처리한다 (`bootstrap.py --yes --deps-only`로 설치, `--init`으로 작업 폴더 만들기).
+- 사용자 PC에서 처음 설치할 때는 `python skills/snu-report-core/scripts/bootstrap.py --yes` (스킬·LTspice MCP 등록까지).
 - `missing:` 줄(이름, 학번, 조)만 사용자에게 한 번에 묻고 저장한다.
 
 ## 지킬 것

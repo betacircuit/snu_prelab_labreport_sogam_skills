@@ -9,7 +9,7 @@ python $E/setup_profile.py --check --course <과목>   # logic, circuit, seminar
 ```
 `ok`가 나오면 바로 작업한다.
 - `need:` 줄은 묻지 않고 처리한다.
-  - 패키지: 안내된 `pip install -r …` (막히면 `--break-system-packages` 또는 `--user`), pandoc 설치.
+  - 프로그램·패키지: 줄 끝의 `python $E/bootstrap.py --yes --deps-only`를 그대로 실행한다 (파이썬 패키지, pandoc, SPICE를 OS에 맞게 설치). 실패한 단계는 출력을 보고 고친 뒤 다시 돌린다.
   - 작업 폴더 없음: 현재 폴더에서 `python $E/setup_profile.py --init` (홈 폴더 자체면 `~/snu-reports`를 만들고 `--root ~/snu-reports --init`). 만든 곳을 한 줄로 알린다.
 - `missing:` 줄이 나오면 그 질문들만 모아 **한 메시지로** 묻는다.
 

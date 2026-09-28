@@ -1,0 +1,7 @@
+* RC low-pass step response, R=1k C=1u (tau = 1 ms). Expected: v1ms = 3.16 V
+V1 in 0 PULSE(0 5 0 1u 1u 5m 10m)
+R1 in out 1k
+C1 out 0 1u
+.tran 1u 10m
+.meas tran v1ms find v(out) at=1m
+.end

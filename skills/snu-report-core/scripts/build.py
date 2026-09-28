@@ -23,6 +23,7 @@
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import copy
 import re
@@ -41,7 +42,7 @@ TEMPLATES = HERE.parent / "templates"
 sys.path.insert(0, str(HERE))
 from docx_post import break_before_frames, postprocess, split_captions  # noqa: E402
 from make_template import build_reference  # noqa: E402
-from ws import course_defaults, find_workspace, remember_engine  # noqa: E402
+from ws import course_defaults, find_tool, find_workspace, remember_engine  # noqa: E402
 
 KIND_LABEL = {"prelab": "Prelab Report", "report": "Lab Report", "sogam": "Seminar Reflection"}
 KIND_KO = {"prelab": "예비보고서", "report": "결과보고서", "sogam": "소감문"}
@@ -337,7 +338,7 @@ def unescape_markers(docx_path: Path):
 
 def to_pdf(docx_path: Path) -> Path:
     subprocess.run(
-        ["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)],
+        [find_tool("soffice") or "soffice", "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)],
         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     return docx_path.with_suffix(".pdf")
@@ -385,7 +386,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         md_tmp = Path(td) / "doc.md"
         md_tmp.write_text(full, encoding="utf-8")
         subprocess.run(
-            ["pandoc", str(md_tmp),
+            [find_tool("pandoc") or "pandoc", str(md_tmp),
              "-f", "markdown+tex_math_dollars+pipe_tables+grid_tables+fenced_divs+raw_attribute+implicit_figures+bracketed_spans",
              "-o", str(out_docx), "--reference-doc", str(ref),
              "--resource-path", f"{src_dir}:{lab_dir}"],
@@ -406,7 +407,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         deliver.mkdir(parents=True, exist_ok=True)
         shutil.copy2(out_docx, deliver / out_docx.name)
         print("  전달용:", (deliver / out_docx.name).relative_to(ws))
-    if pdf and shutil.which("soffice"):
+    if pdf and find_tool("soffice"):
         # 미리보기 PDF: 제출용 docx는 그대로 두고 사본에서만 쪽 갈림 보정
         prev_dir = out_dir / "preview"
         prev_dir.mkdir(exist_ok=True)

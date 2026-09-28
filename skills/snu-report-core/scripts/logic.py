@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import itertools
 import json
@@ -194,9 +195,9 @@ def main():
             print(f"\n{n}: minterms Σm({', '.join(str(i) for i, x in enumerate(vals) if x)})")
         if a.json:
             p = Path(a.json)
-            data = json.loads(p.read_text()) if p.exists() else {}
+            data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
             data["truth_table"] = {"inputs": V, "outputs": outs}
-            p.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+            p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             print("✓", p)
 
     elif a.cmd == "minimize":
@@ -248,7 +249,7 @@ def main():
         doc = {"inputs": V, "outputs": list(outputs), "gates": gates}
         text = yaml.safe_dump(doc, allow_unicode=True, sort_keys=False, default_flow_style=None)
         if a.out:
-            Path(a.out).write_text(text)
+            Path(a.out).write_text(text, encoding="utf-8")
             print("✓", a.out)
         else:
             print(text)

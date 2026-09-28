@@ -8,13 +8,16 @@
 1. **첫 메시지 (한 번에)**
    - `setup_profile.py --check`의 빠진 정보를 묻는다.
    - 가이드북이나 슬라이드가 없으면 달라고 한다.
-   - LTspice MCP가 없으면 아래 "설치 안내"를 붙인다.
+   - LTspice MCP가 없을 때:
+     - 사용자 PC에서 도는 에이전트(Claude Code, Codex. 셸이 Windows나 macOS)면 묻지 말고 `python $E/bootstrap.py --yes`를 직접 실행한다. LTspice, uv, ltspice-mcp를 설치하고 Claude Code·Codex·Claude 앱에 등록한다.
+     - 끝나면 "새 세션에서 MCP가 보인다"고 한 줄 알린다. 이번 세션은 `spice.py run`(LTspice 배치 실행)으로 계속한다.
+     - 클라우드 세션이면 아래 "설치 안내"를 붙인다.
    - 답을 기다리지 않고 2–3단계를 먼저 한다.
 2. **넷리스트**: 분석마다 파일을 하나씩 쓴다 (`labNN/prelab/sim/<이름>_tran.cir`, `<이름>_ac.cir`, 보고서는 `report/sim/`).
    - 아래 "공통 문법"을 지킨다.
    - 입력 진폭과 주파수는 가이드북 값을 쓴다. 가이드북에 없으면 정해서 메시지에 한 줄 밝힌다.
-3. **검증 (ngspice)**
-   - `python $E/spice.py lint <파일>` → `python $E/spice.py run <파일>`로 돌린다.
+3. **검증**
+   - `python $E/spice.py lint <파일>` → `python $E/spice.py run <파일>`로 돌린다. LTspice가 깔려 있으면 LTspice 배치 실행, 없으면 ngspice로 돈다 (`--sim`으로 고를 수 있음).
    - 이론값은 같은 폴더의 `theory.py`(sympy)로 계산해 맞춰 본다.
      - 과도 응답은 `.meas tran`으로 확인한다.
      - AC는 `python $E/spice.py value <raw> -t "v(out)" --at 1k`로 크기(dB)와 위상을 읽는다. `.meas ac`는 LTspice와 ngspice의 결과 형식이 달라 쓰지 않는다.
@@ -39,8 +42,9 @@ inbox/circuit/에 "[Lab 03] ltspice_rc_tran.png"로 올려 줘. t = 1 ms에서 V
 도구 목록에 `ltspice` 서버의 도구가 있으면 쓴다. 도구 이름은 버전마다 다르니 서버 이름으로 찾는다.
 클라우드 세션에서는 사용자 PC의 로컬 MCP가 기기 연결 도구를 거쳐 보인다. 이 경우 그 PC에서 데스크톱 앱이 켜져 있고 대화가 PC에 연결돼 있어야 한다.
 
-## 설치 안내 (MCP가 없을 때 첫 메시지에 붙인다)
-사용자 OS와 쓰는 앱에 맞는 것만 보낸다. LTspice와 MCP는 사용자 PC에 설치되므로 내가 대신 깔 수 없다. 명령을 보내 준다.
+## 설치 안내 (클라우드 세션에서 MCP가 없을 때 첫 메시지에 붙인다)
+가장 쉬운 방법은 사용자 PC의 Claude Code나 Codex에 README의 "PC에 한 번에 설치" 프롬프트를 붙여 넣는 것이다. 그러면 `bootstrap.py`가 아래를 전부 한다.
+직접 설치하려는 사용자에게는 OS와 쓰는 앱에 맞는 것만 보낸다.
 
 **Windows (PowerShell)**
 ```
