@@ -61,6 +61,7 @@ TEXT_FAMILY = [f for f in ("Malgun Gothic", "Noto Sans CJK KR", "Noto Sans CJK J
 
 # schemdraw logic 게이트 치수 (schemdraw/logic/logic.py)
 _LEADIN, _LEADOUT, _GATEL, _GATEH = 0.35, 0.35, 0.65, 1.0
+_NOT_LEAD = 0.35   # NOT·BUFFER 삼각형 앞뒤의 짧은 입출력 선 (다른 게이트의 핀 선과 같은 길이)
 
 BAR_STYLES = [
     {"color": "white", "edgecolor": "black", "linewidth": 0.9},                    # 1번째 계열: 빈 막대
@@ -265,20 +266,23 @@ class Circuit:
         k = canon_kind(kind)
         cls = getattr(logic, GATE_KINDS[k.lower()])
         if k in ("NOT", "BUFFER"):
-            # 2단자 소자라 기본 길이(3)만큼 앞뒤로 선이 붙는다 → 몸체 길이로 줄여 선을 없앤다
-            el = cls().length(_GATEL + (0.24 if k == "NOT" else 0))
-            nin = 1
+            # 2단자 소자라 기본 길이(3)면 앞뒤 선이 길다 → 몸체 + 짧은 입출력 선(_NOT_LEAD)으로 줄인다.
+            # 입력선이 있어야 선이 삼각형 뒷면 가운데(입력)에 들어가는 것이 보인다. 연결은 n.start(입력), n.end(출력)
+            body = _GATEL + (0.24 if k == "NOT" else 0)
+            g = self.add(cls().length(body + 2 * _NOT_LEAD).right().at(out_at).anchor("end"))
+            pins = {"in1": tuple(float(c) for c in g.absanchors["start"]),
+                    "out": tuple(float(c) for c in g.absanchors["end"])}
+            back = tuple(float(c) for c in g.absanchors["in1"])          # 삼각형 뒷면 가운데
+            center = (back[0] + _GATEL * 0.4, back[1])
         else:
-            el = cls(inputs=inputs)
-            nin = inputs
-        g = self.add(el.right().at(out_at).anchor("out"))   # 앞에서 down() 등을 썼어도 게이트는 항상 오른쪽을 본다
-        pins = {f"in{i}": tuple(float(c) for c in g.absanchors[f"in{i}"]) for i in range(1, nin + 1)}
-        pins["out"] = tuple(float(c) for c in g.absanchors["out"])
-        self.gates.append({"kind": k, "name": name or f"{k}{len(self.gates) + 1}", "el": g, "pins": pins})
+            g = self.add(cls(inputs=inputs).right().at(out_at).anchor("out"))   # 앞에서 down() 등을 썼어도 게이트는 항상 오른쪽을 본다
+            pins = {f"in{i}": tuple(float(c) for c in g.absanchors[f"in{i}"]) for i in range(1, inputs + 1)}
+            pins["out"] = tuple(float(c) for c in g.absanchors["out"])
+            center = body_center(k, out_at)
+        self.gates.append({"kind": k, "name": name or f"{k}{len(self.gates) + 1}", "el": g, "pins": pins, "center": center})
         if name:
-            x, y = body_center(k, out_at)
             size = self.name_size * (0.75 if k in ("NOT", "BUFFER") else 1.0)  # 삼각형은 작아서 글자도 작게
-            self.texts.append((x, y, name, "center", "center", size))
+            self.texts.append((center[0], center[1], name, "center", "center", size))
         return g
 
     def node(self, pt, name: str | None = None, where: str = "ne", dot: bool = True, port: str | None = None):
@@ -366,8 +370,23 @@ class Circuit:
                 for p in s:
                     on_edge = box[0] - EPS <= p[0] <= box[2] + EPS and box[1] - EPS <= p[1] <= box[3] + EPS
                     if on_edge and not any(_close(p, q) for q in pins):
+                        hint = " (NOT은 n.start가 입력, n.end가 출력)" if g["kind"] in ("NOT", "BUFFER") else ""
                         errs.append(f"선 끝 {_fmt(p)}이 게이트 {g['name']}({g['kind']})의 핀이 아닌 곳에 닿음 — 핀: "
-                                    + ", ".join(f"{k}{_fmt(v)}" for k, v in g["pins"].items()))
+                                    + ", ".join(f"{k}{_fmt(v)}" for k, v in g["pins"].items()) + hint)
+            # 핀은 핀 선(lead) 끝이다. 선은 가로로 바깥쪽에서 오거나(입력은 왼쪽, 출력은 오른쪽), 세로로 와서 핀 선 끝에서 꺾인다.
+            # 몸체 쪽에서 들어오거나, 선이 다른 핀을 지나가면 안 된다.
+            for pk, q in g["pins"].items():
+                for s in segs:
+                    if _on_interior(q, s):
+                        errs.append(f"선이 게이트 {g['name']}({g['kind']})의 {pk}{_fmt(q)}를 지나감: {_fmt(s[0])}–{_fmt(s[1])} — 핀마다 따로 끌어온다")
+                        continue
+                    if not any(_close(e, q) for e in s):
+                        continue
+                    other = s[1] if _close(s[0], q) else s[0]
+                    wrong = _horiz(s) and (other[0] > q[0] if pk.startswith("in") else other[0] < q[0])
+                    if wrong:
+                        errs.append(f"게이트 {g['name']}({g['kind']}) {pk}{_fmt(q)}에 선이 몸체 쪽에서 닿음 — "
+                                    f"{'입력은 왼쪽에서' if pk.startswith('in') else '출력은 오른쪽으로'} 연결")
         for box, el, terms in parts:
             for s in segs:
                 if _inside_len(s, box) > EPS * 5:
@@ -556,7 +575,7 @@ class Circuit:
         fig = self.d.draw(show=False)
         for x, y, s, ha, va, size in self.texts:
             t = fig.ax.text(x, y, s, ha=ha, va=va, fontsize=size, family=TEXT_FAMILY, zorder=10)
-            t._ck_gate_name = any(abs(x - body_center(g["kind"], g["pins"]["out"])[0]) < EPS and s == g["name"] for g in self.gates)
+            t._ck_gate_name = any(abs(x - g["center"][0]) < EPS and s == g["name"] for g in self.gates)
         fig.save(str(path), dpi=dpi)
         if check:
             renderer = fig.fig.canvas.get_renderer()

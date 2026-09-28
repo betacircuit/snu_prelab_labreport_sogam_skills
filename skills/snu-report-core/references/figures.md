@@ -50,7 +50,9 @@ c.add(elm.Line().at(n4.out).right(1.0)); c.pin((n4.out[0] + 1.0, n4.out[1]), "Y"
 c.save("figs/nand_xor_circuit.png")                      # 그림 검사 (겹침·관통·점)
 c.verify({"Y": "A ^ B"}, kinds={"N1": "NAND", "N2": "NAND", "N3": "NAND", "N4": "NAND"})   # 회로 검증
 ```
-게이트 종류: `AND`, `OR`, `NAND`, `NOR`, `XOR`, `XNOR`, `NOT` (대소문자 무관, inputs=2/3). `NOT`은 앞뒤 선 없이 몸체만 그려진다.
+게이트 종류: `AND`, `OR`, `NAND`, `NOR`, `XOR`, `XNOR`, `NOT` (대소문자 무관, inputs=2/3).
+`NOT`은 삼각형 앞뒤에 짧은 입출력 선이 붙는다. **입력은 `n.start`, 출력은 `n.end`에 잇는다** (`n.in1`은 삼각형 뒷면이라 핀이 아니다).
+선은 핀 선 끝에서 가로로 이어지거나 세로로 와서 꺾여야 한다. 삼각형 뒷면을 따라 내려가거나 꼭짓점에 닿으면 `c.save()`가 멈춘다.
 앞에서 `down()` 등으로 방향을 바꿨어도 게이트는 항상 오른쪽을 본다.
 
 ### 헷갈리는 게이트 — NOR와 XOR
