@@ -258,6 +258,16 @@ def math_layout_warnings(md: str) -> list[str]:
     return w
 
 
+META_TALK = [   # (정규식, 이유) — 보고서가 본인이 쓴 글로 읽히게
+    (r"사용자(?!\s*정의)", "'사용자'라고 쓰지 않는다. 본인이 한 일은 주어 없이 '~했다'"),
+    (r"(?<![A-Za-z])AI(?![A-Za-z])|인공지능|ChatGPT|Claude|GPT", "AI를 언급하지 않는다"),
+    (r"제공(?:된|한|받은|해 준)", "받은 자료처럼 쓰지 않는다 (skeleton은 '실습 자료의 skeleton')"),
+    (r"(?:촬영|캡처|캡쳐)(?:한|된|했|해)", "화면 캡처라고 쓰지 않는다. 그림은 그냥 'Fig.1 - Problem 1 코드'"),
+    (r"수정\s*(?:전|후|한\s*제출용)|원본\s*(?:MATLAB|코드)", "코드를 누가 고쳤는지 드러내지 않는다"),
+    (r"(?:작성|생성)해\s*(?:주|드리)|요청(?:에 따라|하신|한 대로)", "대화체·작업 과정을 쓰지 않는다"),
+]
+
+
 def check_text(text: str, is_docx: bool = False) -> list[str]:
     w = []
     body = plain(text) if not is_docx else text
@@ -344,6 +354,12 @@ def check_text(text: str, is_docx: bool = False) -> list[str]:
         _, ch = normalize_headings(text)
         for c in ch:
             w.append(f"[제목 번호] {c} (build.py가 자동으로 고침)")
+
+    # 13. 본인 글: 보고서는 학생 본인이 쓴 글이다. AI·작업 과정이 드러나는 말을 쓰지 않는다
+    for pat, why in META_TALK:
+        for m in re.finditer(pat, prose):
+            ctx = prose[max(0, m.start() - 10): m.end() + 10].replace("\n", " ")
+            w.append(f"[본인 글] '…{ctx}…' — {why}")
 
     # 12. 수식 배치 (원고에서만): 문장 속 긴 수식·분수, 한 줄에 식 여러 개
     if not is_docx:

@@ -408,9 +408,13 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     raw, head_fixes = normalize_headings(raw)   # 가이드북 문항 번호: '4.2 …' → '4.2) …'
     for c in head_fixes:
         print("  제목 번호 고침:", c, file=sys.stderr)
-    for w in check_text(raw):
+    proof_warns = check_text(raw)
+    for w in proof_warns:
         if not w.startswith("[제목 번호]"):
             print("  오탈자 ⚠", w, file=sys.stderr)
+    meta_talk = [w for w in proof_warns if w.startswith("[본인 글]")]
+    if meta_talk:   # 보고서는 본인이 쓴 글이어야 한다 — '사용자', AI, '수정 전 코드' 같은 말이 있으면 만들지 않는다
+        sys.exit(f"✗ 본인이 쓴 글로 읽히지 않는 표현 {len(meta_talk)}곳 — 위 [본인 글]을 고친 뒤 다시 빌드")
 
     code = lab_dir / "code" / f"HW{v['lab_num']}.m" if kind == "hw" else None
     if code is not None:   # 기초전자기학 HW: 같이 내는 MATLAB 코드 검사 (mcode.py)
@@ -418,10 +422,16 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         if not code.exists():
             print(f"⚠ 코드 파일이 없다: {code}", file=sys.stderr)
         else:
-            errs, cw = mcheck(code)
-            for w in errs + cw:
-                print("  코드 ⚠", w, file=sys.stderr)
-        from mcode import include_code   # {{code: Problem 1}} → m-file의 그 절
+            notes, info = mcheck(code)
+            for w in notes:
+                print("  코드 — 본인에게 알릴 것 (코드는 고치지 않는다):", w, file=sys.stderr)
+            for w in info:
+                print("  코드 — 참고:", w, file=sys.stderr)
+        # 기전연 보고서의 코드는 MATLAB 화면 사진으로만 넣는다 (사용자 지정). 글자 코드는 meta.yaml에 code_text: true일 때만
+        text_code = re.search(r"\{\{\s*code\s*:|^```", raw, re.M)
+        if text_code and not v.get("code_text"):
+            sys.exit("✗ 기전연 보고서에 글자 코드({{code: …}} 또는 ``` 블록)가 있다 — 코드는 MATLAB 화면 사진(figs/p1_code.png)으로 넣는다")
+        from mcode import include_code   # code_text: true일 때만 쓰인다
         raw, missing = include_code(raw, code)
         for k in missing:
             print(f"⚠ {code.name}에 Problem {k} 절이 없다", file=sys.stderr)

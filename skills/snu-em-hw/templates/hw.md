@@ -6,8 +6,8 @@ $$[TODO: 식]$$
 
 ![Problem 1 코드](figs/p1_code.png){#fig:p1code width=100%}
 
-[TODO: 코드 동작 원리 — 계산 순서와 이유. 코드 캡처가 없으면 위 그림 대신 {{code: Problem 1}} 한 줄]
+[TODO: 코드 동작 원리 — 사진 속 코드의 계산 순서와 이유를 본인이 설명하듯. '사용자', '캡처', '수정 전' 같은 말 없이]
 
-![TODO: 결과 그림이 보여 주는 것](figs/p1_result.png){#fig:p1 width=85%}
+![Problem 1 결과](figs/p1_result.png){#fig:p1 width=85%}
 
-[TODO: 결과 — 수치(단위 포함), 그림 해석, 문제가 요구한 서술]
+[TODO: 결과 — 사진에 보이는 수치(단위 포함), 그림 해석, 문제가 요구한 서술]
