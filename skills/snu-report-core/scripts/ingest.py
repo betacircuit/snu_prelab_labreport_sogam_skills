@@ -366,7 +366,7 @@ def draft_meta_and_requirements(lab_dir: Path, lab: str):
         meta = {
             "lab": int(lab),
             "title_en": title,
-            "title": "[확인 필요: 한국어 제목]",
+            "title": title if re.search(r"[가-힣]", title) else "[확인 필요: 한국어 제목]",   # 한국어 교재면 그대로
             "lab_date": str(lab_date) if lab_date else "[확인 필요]",
             "prelab_due": f"{pre} 23:59" if pre else "[확인 필요]",
             "report_due": f"{rep} 23:59" if rep else "[확인 필요]",
@@ -380,11 +380,12 @@ def draft_meta_and_requirements(lab_dir: Path, lab: str):
     req_p = lab_dir / "requirements.md"
     if not req_p.exists() and (gtext or stext):
         parts = [f"# Lab {lab} 요구사항 (자동 추출 초안 — 원문과 대조 후 사용)\n"]
-        for label, pat in (("Prelab", r"(?:Pre-?lab|예비\s*(?:실험|보고서|과제)|실험\s*전\s*과제)"),
+        for label, pat in (("Prelab", r"(?:Pre-?lab|예비\s*(?:실험|보고서|과제)|실험\s*전\s*과제|모의\s*실험\s*보고서)"),
+                           ("실험 보고서 (결과보고서 문항)", r"(?:실험\s*보고서|결과\s*보고서)"),
                            ("Lab (실험)", r"(?:Lab|실험\s*(?:방법|절차|내용)?)"),
                            ("Discussion and Matters to Consider",
                             r"(?:Discussion(?: and Matters to Consider)?|결과\s*및\s*토의|토의|고찰)")):
-            m = re.search(rf"(?ms)^\s*(\d+)\.\s+{pat}\s*$(.*?)(?=^\s*\d+\.\s+(?:[A-Z][a-z]|[가-힣])|\Z)", gtext)
+            m = re.search(rf"(?ms)^\s*(\d+(?:\.\d+)*)\.?\s+{pat}\s*$(.*?)(?=^\s*\d+(?:\.\d+)*\.?\s+(?:[A-Z][a-z]|[가-힣])|\Z)", gtext)
             if m:
                 body = re.sub(r"\n{3,}", "\n\n", m.group(2)).rstrip()
                 parts.append(f"## guidebook {m.group(1)}. {label}\n\n```\n{body}\n```\n")
