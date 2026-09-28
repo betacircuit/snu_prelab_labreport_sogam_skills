@@ -34,7 +34,7 @@ from ws import ENGINE, SKILLS_DIR, find_tool  # noqa: E402
 
 REPO = "betacircuit/snu_prelab_labreport_sogam_skills"
 MARKET, PLUGIN = "snu-ece-skills", "snu-reports"
-SKILL_NAMES = ["snu-report-core", "snu-logic-lab", "snu-circuit-lab", "snu-ece-seminar"]
+SKILL_NAMES = sorted(p.name for p in SKILLS_DIR.iterdir() if (p / "SKILL.md").exists())   # skills/ 아래 폴더 전부 (새 과목을 넣으면 자동)
 REQUIREMENTS = ENGINE.parent / "requirements.txt"
 PY_MODULES = ["yaml", "docx", "sympy", "schemdraw", "matplotlib", "numpy", "openpyxl", "fitz", "kiwipiepy", "spicelib"]
 WIN, MAC, LINUX = sys.platform == "win32", sys.platform == "darwin", sys.platform.startswith("linux")

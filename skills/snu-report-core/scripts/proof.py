@@ -109,6 +109,10 @@ def docx_text(path: Path) -> str:
     body = doc.element.body
     for el in body.iter():
         if el.tag.endswith("}p"):
+            style = el.find(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pStyle")
+            sid = style.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "") if style is not None else ""
+            if "Code" in sid or "Source" in sid:   # 코드 블록은 글이 아니다
+                continue
             txt = "".join(t.text or "" for t in el.iter() if t.tag.endswith("}t"))
             # Word 수식(m:t)은 기호 검사에서 수식으로 본다
             has_math = any(t.tag.endswith("}oMath") for t in el.iter())

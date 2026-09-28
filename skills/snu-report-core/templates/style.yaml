@@ -37,6 +37,10 @@ title_block:
     - "연사: {speaker}"
     - "{student_id} {name}"
     - "강연일: {lab_date_ko}"
+  hw_title: "{course}\nHW{lab_num} {kind_ko}"
+  hw_subtitle: "{title}"
+  hw_lines:
+    - "{student_id} {name}"
   rule: false
 
 # 표·그림 틀 (예시 양식: Table.1 / Fig.1)

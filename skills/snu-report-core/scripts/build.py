@@ -46,9 +46,9 @@ from docx_post import break_before_frames, postprocess, split_captions  # noqa: 
 from make_template import build_reference  # noqa: E402
 from ws import course_defaults, find_tool, find_workspace, remember_engine  # noqa: E402
 
-KIND_LABEL = {"prelab": "Prelab Report", "report": "Lab Report", "sogam": "Seminar Reflection"}
-KIND_KO = {"prelab": "예비보고서", "report": "결과보고서", "sogam": "소감문"}
-SRC = {"prelab": "prelab/prelab.md", "report": "report/report.md", "sogam": "sogam.md"}
+KIND_LABEL = {"prelab": "Prelab Report", "report": "Lab Report", "sogam": "Seminar Reflection", "hw": "Homework"}
+KIND_KO = {"prelab": "예비보고서", "report": "결과보고서", "sogam": "소감문", "hw": "결과 보고서"}
+SRC = {"prelab": "prelab/prelab.md", "report": "report/report.md", "sogam": "sogam.md", "hw": "hw.md"}
 BLOCKING = ("TODO", "미제공", "확인 필요", "판독 불가")
 SOFT = ("미측정", "미수행")
 MARK_RE = re.compile(r"\[(" + "|".join(BLOCKING + SOFT) + r")(?::[^\]]*)?\]")
@@ -79,7 +79,7 @@ def load_vars(lab_dir: Path, kind: str) -> dict:
     v = _D({**(prof or {}), **course, **meta})
     v["kind"] = KIND_LABEL[kind]
     v["kind_key"] = kind
-    lab = meta.get("lab", meta.get("week", ""))
+    lab = meta.get("lab", meta.get("week", meta.get("hw", "")))
     v["lab"] = f"{int(lab):02d}" if str(lab).isdigit() else str(lab)
     mates = v.get("teammates") or []
     v["teammates"] = ", ".join(m["name"] if isinstance(m, dict) else str(m) for m in mates)
@@ -102,10 +102,11 @@ def fill_line(tmpl: str, v: dict) -> str | None:
 
 # ───────────────────────── 제출 파일명 (Lab00 가이드라인: 틀리면 감점) ─────────────────────────
 FILENAME_RE = re.compile(r"^(prelab|lab)\d{2}_\d{4}-\d{5}_[가-힣A-Za-z]+$")
+HW_FILENAME_RE = re.compile(r"^HW\d+_[가-힣A-Za-z]+_\d{4}-\d{5}$")   # 기초전자기학: HW1_홍길동_2025-12345
 
 
 DEFAULT_FILENAME = {"prelab": "prelab{lab}_{student_id}_{name}", "report": "lab{lab}_{student_id}_{name}",
-                    "sogam": "sogam{lab}_{student_id}_{name}"}
+                    "sogam": "sogam{lab}_{student_id}_{name}", "hw": "HW{lab_num}_{name}_{student_id}"}
 
 
 def submission_stem(kind: str, v: dict) -> str:
@@ -114,6 +115,8 @@ def submission_stem(kind: str, v: dict) -> str:
     stem = tmpl.format_map(v)
     if kind in ("prelab", "report") and not FILENAME_RE.match(stem):
         sys.exit(f"✗ 제출 파일명 규칙 위반: {stem!r} — profile.yaml의 student_id(2025-12345 형식)/name, course.yaml의 filename, meta.yaml의 lab 확인")
+    if kind == "hw" and not HW_FILENAME_RE.match(stem):
+        sys.exit(f"✗ 제출 파일명 규칙 위반: {stem!r} — HW1_홍길동_2025-12345 꼴 (profile.yaml, meta.yaml의 hw 확인)")
     return stem
 
 
@@ -353,6 +356,8 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     src_dir = src.parent
     style_path = style_path or TEMPLATES / "style.yaml"
     st = yaml.safe_load(style_path.read_text(encoding="utf-8"))
+    if kind == "hw":   # 과제는 'Problem 1)'이 곧 절 번호라 자동 번호(1.)를 붙이지 않는다
+        st["numbering"]["heading"] = False
     v = load_vars(lab_dir, kind)
 
     raw = src.read_text(encoding="utf-8")
@@ -379,6 +384,20 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     for w in check_text(raw):
         if not w.startswith("[제목 번호]"):
             print("  오탈자 ⚠", w, file=sys.stderr)
+
+    code = lab_dir / "code" / f"HW{v['lab_num']}.m" if kind == "hw" else None
+    if code is not None:   # 기초전자기학 HW: 같이 내는 MATLAB 코드 검사 (mcode.py)
+        from mcode import check as mcheck
+        if not code.exists():
+            print(f"⚠ 코드 파일이 없다: {code}", file=sys.stderr)
+        else:
+            errs, cw = mcheck(code)
+            for w in errs + cw:
+                print("  코드 ⚠", w, file=sys.stderr)
+        from mcode import include_code   # {{code: Problem 1}} → m-file의 그 절
+        raw, missing = include_code(raw, code)
+        for k in missing:
+            print(f"⚠ {code.name}에 Problem {k} 절이 없다", file=sys.stderr)
 
     body, warns = preprocess(raw, st)
     for w in warns:
@@ -426,19 +445,30 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         prev_docx = prev_dir / out_docx.name
         shutil.copy2(out_docx, prev_docx)
         out_pdf = to_pdf(prev_docx)
-        for _ in range(8):
+        for _ in range(8 if out_pdf.exists() else 0):
             splits = split_captions(out_pdf, st)
             if not splits or not break_before_frames(prev_docx, splits[:1], st):
                 break
             out_pdf = to_pdf(prev_docx)
-        print("  미리보기:", out_pdf)
+        print("  미리보기:", out_pdf) if out_pdf.exists() else print("⚠ PDF 변환 실패 (LibreOffice) — docx는 그대로 쓸 수 있다", file=sys.stderr)
+        if kind == "hw" and out_pdf.exists() and code is not None and code.exists():   # 제출용 PDF와 zip
+            shutil.copy2(out_pdf, out_dir / f"{stem}.pdf")
+            from mcode import pack
+            try:
+                pack(lab_dir, out_dir / f"{stem}.pdf")
+            except SystemExit as e:
+                print(e, file=sys.stderr)
+    if kind == "hw" and code is not None and code.exists() and ws:
+        shutil.copy2(code, ws / "out" / str(v.get("key") or lab_dir.parent.name) / code.name)
+        if not (out_dir / f"{stem}.zip").exists():
+            print(f"  제출: Word에서 '{stem}.pdf'로 저장 → python $E/mcode.py pack {lab_dir} --pdf <그 PDF> 로 zip")
     return out_docx
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("lab_dir", type=Path)
-    ap.add_argument("kind", choices=["prelab", "report", "sogam"])
+    ap.add_argument("kind", choices=["prelab", "report", "sogam", "hw"])
     ap.add_argument("--final", action="store_true", help="미해결 상태 표시가 남아 있으면 실패")
     ap.add_argument("--pdf", action="store_true", help="미리보기 PDF도 만든다 (build/preview/)")
     ap.add_argument("--style", type=Path)

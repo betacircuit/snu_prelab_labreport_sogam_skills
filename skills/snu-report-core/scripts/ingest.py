@@ -45,7 +45,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ws import find_tool, find_workspace, known_courses, remember_engine  # noqa: E402
+from ws import course_defaults, find_tool, find_workspace, known_courses, remember_engine  # noqa: E402
 
 PROFILE: dict = {}
 UPLOAD_PREFIX = re.compile(r"^[0-9a-f]{8}-")  # claude 업로드가 붙이는 접두어
@@ -226,6 +226,37 @@ def slug(s: str) -> str:
     return s or "file"
 
 
+HW_RES = [re.compile(r"(?i)(?<![a-z])(?:hw|homework|assignment)\s*[_\- #.]?\s*(\d{1,2})(?!\d)"),
+          re.compile(r"(?<![가-힣])과제\s*[_\- #]?\s*(\d{1,2})(?!\d)")]
+
+
+def classify_hw(path: Path, forced: str | None):
+    """과제(HW) 단위 과목: HW 번호 → (NN | None, 하위 폴더, 파일명, 근거). .m은 code/, 나머지는 materials/"""
+    name = clean_name(path.name)
+    stem, ext = Path(name).stem, Path(name).suffix.lower()
+    num, why = (forced, "--hw") if forced else (None, "")
+    if num is None:
+        for r in HW_RES:
+            m = r.search(stem)
+            if m:
+                num, why = f"{int(m.group(1)):02d}", f"파일명 '{m.group(0).strip()}'"
+                break
+    if num is None:
+        text = head_text(path)
+        for r in HW_RES:
+            m = r.search(text[:800])
+            if m:
+                num, why = f"{int(m.group(1)):02d}", f"내용 앞부분 '{m.group(0).strip()}'"
+                break
+    if num is None:
+        return None, None, name, ""
+    if re.fullmatch(r"(?i)HW\d+_.+_\d{4}-\d{5}", stem):
+        return num, "submitted", name, why
+    if ext == ".m":
+        return num, "code", f"HW{int(num)}.m" if re.fullmatch(r"(?i)hw\d+", stem) else name, why
+    return num, "materials", name, why
+
+
 def classify(path: Path, forced_lab: str | None, croot: Path | None = None):
     """→ (lab_num | None, 대상 하위 경로(폴더), 파일명, 근거)"""
     name = clean_name(path.name)
@@ -288,11 +319,11 @@ def pdf_text(p: Path):
         print(f"  (텍스트 추출 실패: {p.name}: {e})")
 
 
-def dest_dir(croot: Path, lab: str, sub: str) -> Path:
-    """croot = courses/<과목>"""
+def dest_dir(croot: Path, lab: str, sub: str, unit: str = "lab") -> Path:
+    """croot = courses/<과목>, unit = 과목 course.yaml의 unit (lab, hw)"""
     if lab == "00":
         return croot / ("materials" if sub == "materials" else sub)
-    return croot / f"lab{lab}" / sub
+    return croot / f"{unit}{lab}" / sub
 
 
 # ───────────────────────── requirement / meta drafts ─────────────────────────
@@ -399,6 +430,24 @@ def draft_meta_and_requirements(lab_dir: Path, lab: str):
         print("  + requirements.md 초안")
 
 
+def draft_hw(hw_dir: Path, num: str):
+    """과제 meta.yaml과 requirements.md 초안: 과제 PDF에서 문제 번호를 뽑는다."""
+    meta_p = hw_dir / "meta.yaml"
+    if not meta_p.exists():
+        meta_p.write_text(yaml.safe_dump({"hw": int(num), "title": "[확인 필요: 과제 주제]", "due": "[확인 필요]"},
+                                         allow_unicode=True, sort_keys=False), encoding="utf-8")
+        print("  + meta.yaml 초안")
+    req_p = hw_dir / "requirements.md"
+    text = "\n".join(t.read_text(encoding="utf-8", errors="ignore") for t in sorted((hw_dir / "materials").glob("*.txt")))
+    if not req_p.exists() and text:
+        probs = sorted({m.group(1) for m in re.finditer(r"(?im)^\s*(?:Problem|Prob\.?|문제)\s*(\d+)", text)}, key=int)
+        rows = "\n".join(f"| Problem {n} | 코드 `%% Problem {n}` + 보고서 절 | |" for n in probs)
+        req_p.write_text(f"# HW{int(num)} 요구사항 (자동 추출 초안 — 과제 원문과 대조)\n\n"
+                         f"문제: {', '.join(probs) or '[확인 필요: 과제 PDF에서 문제 번호]'}\n\n"
+                         "| 문제 | 코드·보고서 위치 | 상태 |\n|:--|:--|:--|\n" + rows + "\n", encoding="utf-8")
+        print("  + requirements.md 초안")
+
+
 # ───────────────────────── main ─────────────────────────
 LAB_COURSES_SKIP = {"seminar"}   # Lab 번호로 분류하지 않는 과목
 
@@ -413,11 +462,12 @@ def process(root: Path, course: str, files: list[Path], from_inbox: bool, forced
     reg_p = croot / ".ingest.json"
     reg = json.loads(reg_p.read_text(encoding="utf-8")) if reg_p.exists() else {}
     touched_labs = set()
+    unit = str(course_defaults(course).get("unit", "lab"))   # 작업 단위 폴더: lab01/ 또는 hw01/
     seen = {}
     print(f"[{course}]")
     for f in files:
         h = sha(f)
-        lab, sub, name, why = classify(f, forced, croot)
+        lab, sub, name, why = classify_hw(f, forced) if unit == "hw" else classify(f, forced, croot)
         if h in seen:
             print(f"= 중복 건너뜀: {f.name} (같은 내용: {seen[h]})")
             if from_inbox and not dry:
@@ -437,7 +487,7 @@ def process(root: Path, course: str, files: list[Path], from_inbox: bool, forced
                 (inbox / "_unsorted").mkdir(parents=True, exist_ok=True)
                 shutil.move(str(f), inbox / "_unsorted" / f.name) if from_inbox else shutil.copy2(f, inbox / "_unsorted" / f.name)
             continue
-        d = dest_dir(croot, lab, sub)
+        d = dest_dir(croot, lab, sub, unit)
         target = d / name
         if target.exists() and sha(target) != h:  # 같은 이름 다른 내용 → 버전 보존
             target = d / f"{target.stem}_{dt.date.today():%y%m%d}{target.suffix}"
@@ -456,14 +506,16 @@ def process(root: Path, course: str, files: list[Path], from_inbox: bool, forced
     reg_p.write_text(json.dumps(reg, ensure_ascii=False, indent=1), encoding="utf-8")
 
     for lab in sorted(touched_labs):
-        ld = croot / f"lab{lab}"
-        for sub in ("prelab/figs", "report/figs", "report/photos", "report/scope", "report/raw", "submitted"):
+        ld = croot / f"{unit}{lab}"
+        subs = ("code", "figs", "materials", "submitted") if unit == "hw" else \
+            ("prelab/figs", "report/figs", "report/photos", "report/scope", "report/raw", "submitted")
+        for sub in subs:
             (ld / sub).mkdir(parents=True, exist_ok=True)
-        print(f"  [lab{lab}]")
-        draft_meta_and_requirements(ld, lab)
+        print(f"  [{unit}{lab}]")
+        (draft_hw if unit == "hw" else draft_meta_and_requirements)(ld, lab)
 
     # 자료 목록
-    for idx_dir in [croot / "materials", *sorted(croot.glob("lab*/materials"))]:
+    for idx_dir in [croot / "materials", *sorted(croot.glob(f"{unit}*/materials"))]:
         if idx_dir.exists():
             rows = [f"| {p.name} | {p.stat().st_size // 1024} KB |" for p in sorted(idx_dir.iterdir())
                     if p.is_file() and p.suffix != ".txt" and p.name != "INDEX.md"]

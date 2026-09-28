@@ -22,5 +22,5 @@ description: 서울대 전기정보공학부 「회로이론 및 실험」의 pr
 | LTspice 시뮬레이션 | `references/ltspice.md`: 넷리스트 → `spice.py lint`·`run`(ngspice로 검증) → LTspice 실행·캡처(MCP 또는 사용자). 보고서에 넣는 시뮬레이션 그림은 LTspice 캡처 |
 | 파형·주파수 그래프 | matplotlib 흑백 (figures.md). 보드 선도는 로그 축 |
 | 측정값 | 멀티미터, 오실로스코프, 함수 발생기 값은 `report/evidence.yaml`에 기록하고, 이론값과의 차이·오차율은 `derived`로 계산한다 |
-| 자주 하는 실수 | 엔진 `references/mistakes.md`의 공통·회로이론 절 — 쓰기 전에 확인 (ω/f 혼동, RMS·Vpp, 50 Ω 출력, 프로브 접지, SPICE `M`·`F` 접두사 …) |
+| 자주 하는 실수 | 이 폴더의 `references/mistakes.md` + 엔진의 공통 `references/mistakes.md` — 쓰기 전에 확인 (ω/f 혼동, RMS·Vpp, 50 Ω 출력, 프로브 접지, SPICE `M`·`F` 접두사 …) |
 | 부품값 | 공칭값과 실측값을 구분한다 (예: 공칭 1 kΩ, 실측 0.987 kΩ). 실측값으로 계산했다면 실험 방법에 밝힌다 |

@@ -1,12 +1,29 @@
 ---
 name: snu-report-core
-description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-circuit-lab, snu-ece-seminar)이 함께 쓰는 공통 엔진 — 서식, 문체, 근거 규칙과 docx 빌드 스크립트. 단독 요청에는 쓰지 않고, 과목 스킬이 읽으라고 할 때 읽는다.
+description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-circuit-lab, snu-ece-seminar, snu-em-hw)이 함께 쓰는 공통 엔진 — 서식, 문체, 근거 규칙과 docx 빌드 스크립트. 단독 요청에는 쓰지 않고, 과목 스킬이 읽으라고 할 때 읽는다.
 ---
 
-# 공통 엔진 — Prelab / Lab Report / 소감문
+# 공통 엔진 — Prelab / Lab Report / 소감문 / 과제
 
-과목 스킬(`snu-logic-lab`, `snu-circuit-lab`, `snu-ece-seminar`)이 함께 쓰는 규칙과 도구다. 과목 스킬의 SKILL.md가 여기로 안내한다.
+과목 스킬(`snu-logic-lab`, `snu-circuit-lab`, `snu-ece-seminar`, `snu-em-hw`)이 함께 쓰는 규칙과 도구다. 과목 스킬의 SKILL.md가 여기로 안내한다.
 원고는 마크다운으로 쓰고, `build.py`가 서식을 입혀 docx로 만든다.
+
+## 고칠 곳 지도
+무엇을 바꾸려면 어느 파일을 고치는지. 과목에만 해당하는 것은 과목 폴더, 모든 과목에 해당하는 것은 이 엔진 폴더에 둔다.
+
+| 바꿀 것 | 고칠 파일 |
+|---|---|
+| 글꼴, 크기, 여백, 제목 블록, 절 번호 모양 | `templates/style.yaml` (한 곳) |
+| 서식 규칙 설명 (표·그림·수식) | `references/format.md` |
+| 문체, 쓰지 않는 표현 | `references/writing.md` (+ 검사 목록 `scripts/style_check.py`의 `BANNED`) |
+| 오탈자 검사 목록 (맞춤법, 게이트 이름) | `scripts/proof.py`의 `COMMON`, `GATES`, `CHIP_FUNC` |
+| 회로도 규칙과 검사 | `references/figures.md`, `scripts/circuit_kit.py` |
+| 모든 과목 공통 실수 | `references/mistakes.md` |
+| 과목명, 파일명 규칙, 작업 단위(lab/hw) | `skills/<과목>/course.yaml` |
+| 과목 제출 규칙, 마감, 필수 항목 | `skills/<과목>/references/course.md` |
+| 과목 실수 목록 | `skills/<과목>/references/mistakes.md` |
+| 과목 작업 순서 | `skills/<과목>/SKILL.md` |
+| **새 과목 추가** | `skills/<새 과목>/`에 `SKILL.md`, `course.yaml`(key), `references/course.md`를 만들고, `.claude-plugin/marketplace.json`의 skills와 `AGENTS.md` 표에 한 줄씩 더한다. 스킬 등록·작업 폴더는 자동으로 잡힌다 |
 
 ## 경로 두 개
 - **엔진 `$E`** = 이 폴더의 `scripts/` 절대 경로. 과목 스킬 폴더에서 보면 `../snu-report-core/scripts`.
@@ -23,7 +40,7 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 | `references/writing.md` | 문체 (쓰지 않는 표현, 용어, 수식 배치, 실험 방법·오차 분석 쓰는 법) |
 | `references/evidence.md` | 데이터와 근거 (만들지 않을 것, 묻기 전에 판단할 것, 근거표) |
 | `references/figures.md` | 회로도와 그래프 그리는 법, NOR/XOR 구분, **회로 검증 순서** |
-| `references/mistakes.md` | 논설실·회로실험에서 자주 하는 실수와 막는 법 (쓰기 전에 읽는다) |
+| `references/mistakes.md` | 모든 과목 공통 실수와 막는 법. 과목별 실수는 과목 스킬의 `references/mistakes.md` (쓰기 전에 둘 다 읽는다) |
 | `references/proofreading.md` | **오탈자 검증 순서** (도구 검사 → 결과물 검사 → 대조 읽기) |
 | `references/prelab.md` | prelab 절차 |
 | `references/labreport.md` | lab report 절차 |
@@ -83,7 +100,8 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 ├── snu-report-core/          이 공통 엔진 (scripts/ = $E, templates/, references/, requirements.txt)
 ├── snu-logic-lab/            논리설계 및 실험 (course.yaml, references/course.md)
 ├── snu-circuit-lab/          회로이론 및 실험
-└── snu-ece-seminar/          전정세 소감문 (data/professors.yaml = 교수 DB)
+├── snu-ece-seminar/          전정세 소감문 (data/professors.yaml = 교수 DB)
+└── snu-em-hw/                기초전자기학 MATLAB 과제 (작업 단위 hwNN/, build.py 종류 `hw`)
 ```
 
 ## 스크립트 (`$E/`)
@@ -104,6 +122,7 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 | `timing.py`, `scope.py`, `compare.py` | 예상 파형, 스코프 CSV 측정, 진리표 비교 |
 | `spice.py` | SPICE 넷리스트 공통 문법 검사(`lint`), ngspice 실행·`.meas`(`run`), 파형·보드 선도(`plot`), 값 읽기(`value`), 연결표(`nodes`). LTspice raw도 읽는다 |
 | `make_template.py` | style.yaml → reference.docx |
+| `mcode.py` | MATLAB 과제 코드 검사(`check`: 파일 이름, 첫 줄 `clc; clear;`, 영어 주석, 문제 절), 실행(`run`: MATLAB 없으면 Octave, 그림 PNG 저장), 제출 zip(`pack`) |
 
 그림 스크립트(`make_figs.py`)는 맨 위에서 작업 폴더를 찾고 엔진을 import한다. 엔진 경로는 `setup_profile.py`와 `build.py`가 `W/.snu-engine`에 적어 둔다:
 ```python
@@ -139,7 +158,7 @@ sys.path.insert(0, str(ENGINE))
 - [ ] `style_check.py` 통과 (어휘 반복 포함), 수식 뒤에서 문장이 이어지지 않는다
 - [ ] `proof.py`가 원고와 docx 둘 다 통과, proofreading.md "눈으로 볼 것"을 확인했다
 - [ ] 모든 회로도가 `c.save()` 그림 검사와 `c.verify()` 회로 검증을 통과했다 (선 겹침 없음, NOR/XOR 등 게이트 종류가 본문·칩 번호와 같다)
-- [ ] mistakes.md의 이번 Lab 주제 항목에 걸리는 것이 없다
+- [ ] 공통·과목 mistakes.md의 이번 주제 항목에 걸리는 것이 없다
 - [ ] 제목의 가이드북 문항 번호가 `4.2)` 꼴이고, 요구하지 않은 절("실험 준비" 등)이 없다
 - [ ] 굵은 글씨는 맨 위 제목과 절 제목에만 있다
 - [ ] 미리보기 PDF를 전 페이지 확인했다
