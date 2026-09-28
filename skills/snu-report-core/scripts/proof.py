@@ -214,6 +214,50 @@ COMMON = [  # (틀린 꼴 정규식, 바른 꼴)
 UNITS = r"(?:ns|us|µs|μs|ms|mV|V|mA|µA|μA|kΩ|MΩ|Ω|Hz|kHz|MHz|pF|nF|µF|μF|uF|mH|µH|dB)"
 
 
+def _top_level_split(expr: str) -> list[str]:
+    """중괄호·괄호 밖의 ',', '\\quad', '\\qquad'로 나눈다."""
+    parts, depth, cur, i = [], 0, "", 0
+    while i < len(expr):
+        c = expr[i]
+        if c in "{([":
+            depth += 1
+        elif c in "})]":
+            depth -= 1
+        if depth == 0 and (c == "," or expr.startswith("\\qquad", i) or expr.startswith("\\quad", i)):
+            parts.append(cur)
+            cur = ""
+            i += 6 if expr.startswith("\\qquad", i) else (5 if c == "\\" else 1)
+            continue
+        cur += c
+        i += 1
+    parts.append(cur)
+    return [x for x in parts if x.strip()]
+
+
+def math_layout_warnings(md: str) -> list[str]:
+    """문장 속 수식은 짧게(기호, 짧은 등식), 분수·긴 식은 따로 한 줄. 따로 뺀 줄에는 식 하나(많아야 둘)."""
+    w = []
+    body = re.sub(r"(?s)```.*?```", "", md)
+    for m in re.finditer(r"(?s)\$\$(.+?)\$\$", body):
+        eqs = [x for x in _top_level_split(m.group(1)) if "=" in x]
+        if len(eqs) >= 3:
+            w.append(f"[수식] 한 줄에 식 {len(eqs)}개 — 한 줄에 하나(많아야 둘)씩 $$로 나눈다: \"{m.group(1).strip()[:50]}…\"")
+    inline = re.sub(r"(?s)\$\$.+?\$\$", "", body)
+    for m in re.finditer(r"(?<![\\$])\$([^$\n]+)\$", inline):
+        e = m.group(1)
+        core = re.sub(r"\\(?:text|mathrm|operatorname)\{[^}]*\}|\\[A-Za-z]+|[\s{}]", "x", e)
+        why = None
+        if "\\frac" in e or "\\sum" in e or "\\int" in e:
+            why = "분수·합·적분"
+        elif "/" in e and "(" in e:
+            why = "괄호 나눗셈"
+        elif len(core) > 28:
+            why = "길이"
+        if why:
+            w.append(f"[수식] 문장 속 수식이 길다({why}): ${e[:40]}$ — 문장을 끝내고 다음 줄에 $$…$$로 뺀다")
+    return w
+
+
 def check_text(text: str, is_docx: bool = False) -> list[str]:
     w = []
     body = plain(text) if not is_docx else text
@@ -300,6 +344,10 @@ def check_text(text: str, is_docx: bool = False) -> list[str]:
         _, ch = normalize_headings(text)
         for c in ch:
             w.append(f"[제목 번호] {c} (build.py가 자동으로 고침)")
+
+    # 12. 수식 배치 (원고에서만): 문장 속 긴 수식·분수, 한 줄에 식 여러 개
+    if not is_docx:
+        w += math_layout_warnings(text)
 
     # 11. 빌드 결과 전용
     if is_docx:

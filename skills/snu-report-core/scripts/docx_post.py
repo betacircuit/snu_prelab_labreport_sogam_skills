@@ -501,6 +501,64 @@ def modern_word(doc) -> int:
     return n
 
 
+def math_size(doc, inline_pt: float, display_pt: float) -> int:
+    """수식 글자 크기. Cambria Math는 같은 pt의 맑은 고딕보다 커 보여서 본문보다 조금 작게 둔다.
+    m:r 안에 w:rPr(w:sz)를 넣는다 (OMML 순서: m:rPr → w:rPr → m:t)."""
+    n = 0
+    body = doc.element.body
+    for om in body.iter(qn("m:oMath")):
+        display = om.getparent() is not None and om.getparent().tag == qn("m:oMathPara")
+        half = str(int(round((display_pt if display else inline_pt) * 2)))
+        for r in om.iter(qn("m:r")):
+            rpr = r.find(qn("w:rPr"))
+            if rpr is None:
+                rpr = OxmlElement("w:rPr")
+                mrpr = r.find(qn("m:rPr"))
+                (mrpr.addnext(rpr) if mrpr is not None else r.insert(0, rpr))
+            for tag in ("w:sz", "w:szCs"):
+                el = rpr.find(qn(tag))
+                if el is None:
+                    el = OxmlElement(tag)
+                    rpr.append(el)
+                el.set(qn("w:val"), half)
+            _upright(r, rpr)
+            n += 1
+    return n
+
+
+_UPRIGHT_TXT = re.compile(r"[A-Za-zΑ-Ωα-ωµμΩ]")
+_CAP_GREEK = re.compile(r"^[ΓΔΘΛΞΠΣΦΨΩ]$")
+
+
+def _upright(r, rpr):
+    """세움꼴(m:sty p)인 글자 — 함수 이름, 단위 — 와 대문자 그리스(Δ)를 '일반 텍스트'(m:nor)로.
+    Word는 m:sty p를 따르지만 LibreOffice(미리보기·PDF 변환)는 m:nor만 세운다. 글꼴은 Cambria Math로 맞춘다.
+    (OMML 스키마에서 m:nor와 m:sty는 둘 중 하나라서 m:sty는 뺀다)"""
+    t = "".join(x.text or "" for x in r.findall(qn("m:t")))
+    mrpr = r.find(qn("m:rPr"))
+    sty = mrpr.find(qn("m:sty")) if mrpr is not None else None
+    plain = sty is not None and sty.get(qn("m:val")) == "p" and _UPRIGHT_TXT.search(t)
+    if not (plain or _CAP_GREEK.match(t.strip())):
+        return
+    if mrpr is None:
+        mrpr = OxmlElement("m:rPr")
+        r.insert(0, mrpr)
+    if sty is not None:
+        mrpr.remove(sty)
+    for sc in mrpr.findall(qn("m:scr")):
+        mrpr.remove(sc)
+    if mrpr.find(qn("m:nor")) is None:
+        nor = OxmlElement("m:nor")
+        lit = mrpr.find(qn("m:lit"))
+        (lit.addnext(nor) if lit is not None else mrpr.insert(0, nor))
+    fonts = rpr.find(qn("w:rFonts"))
+    if fonts is None:
+        fonts = OxmlElement("w:rFonts")
+        rpr.insert(0, fonts)
+    for a in ("w:ascii", "w:hAnsi", "w:cs"):
+        fonts.set(qn(a), "Cambria Math")
+
+
 def postprocess(docx_path, st: dict):
     from docx import Document
 
@@ -517,6 +575,9 @@ def postprocess(docx_path, st: dict):
         res["no_autospace"] = no_autospace(doc)
     if st.get("spacing", {}).get("leading_space", True):
         res["leading_space"] = leading_space(doc)
+    sz = st.get("size", {})
+    res["math_runs"] = math_size(doc, float(sz.get("math", sz.get("body", 11) - 1)),
+                                 float(sz.get("math_display", sz.get("body", 11))))
     res["bullets"] = dash_bullets(doc)
     res["table_alt_removed"] = modern_word(doc)
     from ooxml_order import normalize_document
