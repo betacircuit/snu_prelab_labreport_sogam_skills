@@ -27,7 +27,8 @@ ID_RE = re.compile(r"^\d{4}-\d{5}$")
 NAME_RE = re.compile(r"^[가-힣A-Za-z]{2,20}$")
 REQUIREMENTS = ENGINE.parent / "requirements.txt"
 PY_MODULES = {"yaml": "pyyaml", "docx": "python-docx", "sympy": "sympy", "schemdraw": "schemdraw",
-              "matplotlib": "matplotlib", "numpy": "numpy", "openpyxl": "openpyxl", "fitz": "pymupdf"}
+              "matplotlib": "matplotlib", "numpy": "numpy", "openpyxl": "openpyxl", "fitz": "pymupdf",
+              "kiwipiepy": "kiwipiepy", "spicelib": "spicelib"}
 
 # (항목, 필수 여부, 질문)
 PROFILE_FIELDS = [
@@ -103,6 +104,9 @@ def init_workspace(root: Path) -> Path:
 
 def check(root: Path | None, course: str | None) -> list[str]:
     out = check_deps()
+    if course == "circuit" and not shutil.which("ngspice"):
+        out.append("need: ngspice — 넷리스트 검증용 (spice.py). Linux: apt-get install ngspice, macOS: brew install ngspice,"
+                   " Windows: https://ngspice.sourceforge.io/download.html (LTspice 실행·캡처는 references/ltspice.md)")
     if root is None:
         cwd = Path.cwd().resolve()
         where = "현재 폴더가 홈 폴더 자체라 ~/snu-reports를 만들어 거기서" if cwd == Path.home().resolve() else f"현재 폴더({cwd})를"

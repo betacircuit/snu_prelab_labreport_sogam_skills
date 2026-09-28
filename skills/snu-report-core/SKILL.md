@@ -86,13 +86,14 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 | `ingest.py` | 자료 자동 분류 (`inbox/<과목>/` → `courses/<과목>/`), 중복 제거, 텍스트 추출, meta·requirements 초안 |
 | `evidence.py` | 근거표 검사, 평균·계산값, xlsx 셀 덤프 |
 | `build.py` | 원고 → docx (제목 블록, 절 번호, 표·그림 틀, 수식 공백, 파일명). `prelab`, `report`, `sogam`. `--pdf`로 미리보기 |
-| `style_check.py` | 문체 검사: 어미·문장 시작·구절 반복, 접속어·추측 남용, 본문 굵은 글씨, 기타 절 분량 (build.py가 자동 실행) |
+| `style_check.py` | 문체 검사: 어미·문장 시작·구절 반복, 같은 서술어 반복(어휘), 접속어·추측 남용, 본문 굵은 글씨, 기타 절 분량 (build.py가 자동 실행) |
 | `docx_post.py` | 표 캡션 행, 그림 틀, 열 너비, 문단 앞 공백, `-` 목록, 한글-영문 자동 간격 끄기, Word 호환 모드 해제 (build.py가 호출) |
 | `ooxml_order.py` | 저장 직전 OOXML 스키마 순서 정리 — Word 호환성 검사 경고·"읽을 수 없는 내용" 방지 |
 | `circuit_kit.py` | 회로도(게이트 이름 중앙, 노드 이름 점 옆), 그래프 막대 스타일 |
 | `logic.py` | 진리표, SOP/POS 최소화, K-map, 넷리스트 |
 | `pinmap.py` | 넷리스트 → 74xx 칩·핀 배선표 (`--nand-only`) |
 | `timing.py`, `scope.py`, `compare.py` | 예상 파형, 스코프 CSV 측정, 진리표 비교 |
+| `spice.py` | SPICE 넷리스트 공통 문법 검사(`lint`), ngspice 실행·`.meas`(`run`), 파형·보드 선도(`plot`), 값 읽기(`value`), 연결표(`nodes`). LTspice raw도 읽는다 |
 | `make_template.py` | style.yaml → reference.docx |
 
 그림 스크립트(`make_figs.py`)는 맨 위에서 작업 폴더를 찾고 엔진을 import한다. 엔진 경로는 `setup_profile.py`와 `build.py`가 `W/.snu-engine`에 적어 둔다:
@@ -125,7 +126,7 @@ sys.path.insert(0, str(ENGINE))
 - [ ] 대응표의 모든 문항에 답했다
 - [ ] 모든 수치가 evidence.yaml 또는 스크립트 결과에서 왔다
 - [ ] lab report에 prelab 그림, 비공식 자료, 작업용 표시(`[TODO]` 등)가 없다
-- [ ] `style_check.py` 통과, 수식 뒤에서 문장이 이어지지 않는다
+- [ ] `style_check.py` 통과 (어휘 반복 포함), 수식 뒤에서 문장이 이어지지 않는다
 - [ ] 굵은 글씨는 맨 위 제목과 절 제목에만 있다
 - [ ] 미리보기 PDF를 전 페이지 확인했다
 - [ ] docx 스키마 검사 통과 (`python /mnt/skills/public/docx/scripts/office/validate.py 파일.docx`, 있을 때)

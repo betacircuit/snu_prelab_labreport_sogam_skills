@@ -15,6 +15,10 @@
   8. 문장 길이가 너무 고른 문단 (문장 4개 이상, 길이 편차가 작음) — 기계적인 리듬
   9. 본문·목록의 굵은 글씨 (굵게는 제목과 절 제목에만)
  10. '기타'(9.3.x) 절이 세 문장을 넘음
+ 11. 같은 서술어(쓰다, 넣다, 길다, 확인하다 …)가 문서 전체에서 잦음 (4번 이상이면서 1000자당 2번 이상)
+ 12. 같은 서술어가 한 문단에 3번 이상
+     뜻이 바뀌어 바꿀 수 없는 말(LED가 켜지다 등)은 원고에 <!-- 어휘 허용: 켜다, 따르다 --> 로 적어 둔다.
+     형태소 분석은 kiwipiepy. 없으면 ~하다/~되다 서술어만 본다.
 """
 from __future__ import annotations
 
@@ -32,6 +36,89 @@ BANNED = ["에 대해 알아보", "라고 할 수 있", "매우 ", "다양한", 
           # 소감문 상투 표현 (skills/snu-ece-seminar/references/sogam.md)
           "감명을 받았", "깊이 깨달", "뜻깊은 시간", "유익한 시간", "더욱 노력하", "열정이 느껴"]
 HEDGES = ["가능성", "보인다", "추정된다"]
+
+# ───────── 어휘 반복 (서술어) ─────────
+LIGHT_PRED = {"하다", "되다", "있다", "없다", "않다", "이다", "아니다", "같다", "대하다", "위하다", "통하다", "관하다",
+              "흐르다", "켜다", "끄다", "꺼지다"}   # 끝줄: 바꿀 말이 없는 물리 현상 (전류가 흐르다, LED가 켜지다)
+PRED_ALT = {   # 뜻에 따라 바꿀 말 (용어·기호는 바꾸지 않는다)
+    "쓰다": "법칙은 적용하다, 식은 '~은 다음과 같다', 게이트·소자는 필요하다·들다, 도구는 '~로 ~하다'",
+    "넣다": "신호는 인가하다·가하다, 입력 핀은 연결하다·물리다",
+    "묶다": "입력은 함께 연결하다·합치다, K-map은 한 묶음으로 덮다·잡다",
+    "길다": "늦다, N ns 더 걸리다, 차이가 N ns다, N배, 늘다 — 또는 짧은 쪽을 주어로",
+    "짧다": "빠르다, N ns 덜 걸리다, 줄다 — 또는 긴 쪽을 주어로",
+    "따르다": "~마다, ~별, '~이 0일 때와 1일 때', '~을 바꾸면'",
+    "확인하다": "읽다, 보다, 맞다, 드러나다 — 또는 수치를 바로 말한다",
+    "나타나다": "주어+서술어로 바로 ('지연이 14 ns였다')",
+    "보이다": "주어+서술어로 바로, 또는 '~로 읽힌다', '~에 가깝다'",
+    "측정하다": "재다, 읽다, 기록하다",
+    "증가하다": "늘다, 커지다, 올라가다, 길어지다",
+    "감소하다": "줄다, 작아지다, 내려가다, 짧아지다",
+    "일치하다": "맞다, 같다, 차이가 N 안이다",
+    "발생하다": "생기다, 나다",
+    "사용하다": "쓰다, 두다, 또는 구체 동사(연결하다, 재다)",
+    "연결하다": "물리다, 잇다, 꽂다, (프로브를) 대다",
+    "두다": "고정하다, 놓다, 맞추다, (값을) 주다",
+    "만들다": "구성하다, 꾸미다, 얻다, 나오다",
+}
+_KIWI = None
+
+
+def _kiwi():
+    global _KIWI
+    if _KIWI is None:
+        try:
+            from kiwipiepy import Kiwi
+            _KIWI = Kiwi()
+        except Exception:
+            _KIWI = False
+    return _KIWI
+
+
+_HADA = re.compile(r"(?<![가-힣])([가-힣]{2,4}?)(하였|했|한다|하면|하여|해서|하고|하는|하지|한|할|해|되었|됐|된다|되면|되어|돼|되고|되는|되지|된|될)(?![가-힣]{3})")
+
+
+def predicates(text: str) -> list[str]:
+    """서술어 원형 목록 (쓰다, 확인하다 …). 가벼운 서술어(하다, 되다, 있다 …)는 뺀다."""
+    k = _kiwi()
+    out = []
+    if k:
+        toks = k.tokenize(text)
+        for i, t in enumerate(toks):
+            if t.tag in ("XSV", "XSA") and i and toks[i - 1].tag in ("NNG", "XR"):
+                out.append(toks[i - 1].form + ("되다" if t.form.startswith("되") else "하다"))
+            elif t.tag in ("VV", "VA") or t.tag.startswith(("VV-", "VA-")):
+                out.append(t.form + "다")
+    else:   # 형태소 분석기가 없으면 ~하다/~되다만
+        for m in _HADA.finditer(text):
+            out.append(m.group(1) + ("되다" if m.group(2)[0] in "되됐돼된될" else "하다"))
+    return [w for w in out if w not in LIGHT_PRED]
+
+
+def allowed_words(md: str) -> set[str]:
+    words = set()
+    for m in re.finditer(r"<!--\s*어휘\s*허용\s*:(.*?)-->", md, flags=re.S):
+        words |= {w.strip() if w.strip().endswith("다") else w.strip() + "다" for w in m.group(1).split(",") if w.strip()}
+    return words
+
+
+def lexical_warnings(md: str, paras: list[str]) -> list[str]:
+    allow = allowed_words(md)
+    warns = []
+    per_para = [predicates(p) for p in paras]
+    total = Counter(w for ps in per_para for w in ps)
+    chars = sum(len(re.sub(r"\s", "", p)) for p in paras) or 1
+    for w, n in total.most_common():
+        rate = n * 1000 / chars
+        if n >= 4 and rate >= 2.0 and w not in allow:
+            hint = PRED_ALT.get(w, "뜻에 맞는 구체적인 동사로 바꾸거나, 문장 틀(비교·원인·수치 먼저)을 바꾼다")
+            warns.append(f"[어휘 반복] '{w}' {n}번 (1000자당 {rate:.1f}) → {hint}")
+    for pi, ps in enumerate(per_para, 1):
+        for w, n in Counter(ps).items():
+            if n >= 3 and w not in allow:
+                warns.append(f"[어휘 반복] 문단 {pi}: '{w}' {n}번 → 두 번째부터 다른 말로")
+    if not _kiwi():
+        warns.append("[참고] kiwipiepy가 없어 ~하다/~되다 서술어만 검사함 (pip install kiwipiepy)")
+    return warns
 
 
 def strip_md(text: str) -> str:
@@ -138,6 +225,8 @@ def check(md: str) -> list[str]:
         n = sum(len(sentences(pp)) for pp in paragraphs(body))
         if n > 3:
             warns.append(f"[분량] '{m.group(1).strip()}' {n}문장 → 기타 절은 두세 문장")
+    # 11–12. 어휘 반복
+    warns += lexical_warnings(md, paras)
     # 문서 전체 어미 분포
     ends = Counter(ending(s) for s in all_sents)
     if all_sents:

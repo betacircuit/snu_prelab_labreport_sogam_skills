@@ -6,3 +6,5 @@ matplotlib
 numpy
 openpyxl
 pymupdf
+kiwipiepy      # 한국어 형태소 분석 (style_check 어휘 반복 검사)
+spicelib       # SPICE raw 파일 읽기 (회로이론 LTspice·ngspice)
