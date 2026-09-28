@@ -9,6 +9,8 @@
 | m-file 첫 줄에 `clc; clear;`가 없음, 파일 이름이 `hw1.m`·`HW1_final.m` | 도구: `mcode.py check` |
 | 한글 주석 | 주석과 출력 문자열은 영어. 도구: `mcode.py check` (비ASCII 문자) |
 | 코드와 보고서의 코드가 다름 | 보고서 코드는 `{{code: Problem N}}`으로 m-file에서 바로 가져온다 (SKILL.md) |
+| 문제의 제약을 어김 (내장 함수 금지, subplot 금지, 그래프 개수) | `requirements.md`에 제약을 적고 `mcode.py check --forbid "1:sinc,subplot"`. 개수 조건은 보고서 그림에서 센다 |
+| $t = 0$ 같은 특이점을 따로 처리하지 않음 (sinc의 0/0) | 조건식으로 정의대로 값(sinc(0) = 1)을 넣고, 그렇게 했다고 동작 원리에 쓴다 |
 | 제출한 코드가 처음부터 돌리면 에러 | `clear` 뒤 처음부터 `mcode.py run`으로 돌려 본다. 다른 파일·작업 공간 변수에 기대지 않는다 |
 
 ## 물리량과 단위

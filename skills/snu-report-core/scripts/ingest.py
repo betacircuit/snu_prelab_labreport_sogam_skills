@@ -227,7 +227,7 @@ def slug(s: str) -> str:
 
 
 HW_RES = [re.compile(r"(?i)(?<![a-z])(?:hw|homework|assignment)\s*[_\- #.]?\s*(\d{1,2})(?!\d)"),
-          re.compile(r"(?<![가-힣])과제\s*[_\- #]?\s*(\d{1,2})(?!\d)")]
+          re.compile(r"(?<![가-힣])(?:과제|실습)\s*[_\- #]?\s*(\d{1,2})(?!\d)")]   # 기전연 자료는 '실습1' = HW1
 
 
 def classify_hw(path: Path, forced: str | None):
@@ -431,21 +431,37 @@ def draft_meta_and_requirements(lab_dir: Path, lab: str):
 
 
 def draft_hw(hw_dir: Path, num: str):
-    """과제 meta.yaml과 requirements.md 초안: 과제 PDF에서 문제 번호를 뽑는다."""
+    """과제 meta.yaml과 requirements.md 초안.
+    실습 자료의 'Homework' 절에서 문제(1. 2. 3.)와 제약('사용 금지', '사용하지 않고'), '제출 기한'을 뽑는다."""
+    text = "\n".join(t.read_text(encoding="utf-8", errors="ignore") for t in sorted((hw_dir / "materials").glob("*.txt")))
+    due = None
+    m = re.search(r"제출\s*기한\s*[:：]?\s*([^\n]+)", text)
+    if m:
+        due = m.group(1).strip()
     meta_p = hw_dir / "meta.yaml"
     if not meta_p.exists():
-        meta_p.write_text(yaml.safe_dump({"hw": int(num), "title": "[확인 필요: 과제 주제]", "due": "[확인 필요]"},
+        meta_p.write_text(yaml.safe_dump({"hw": int(num), "title": "[확인 필요: 과제 주제]", "due": due or "[확인 필요]"},
                                          allow_unicode=True, sort_keys=False), encoding="utf-8")
-        print("  + meta.yaml 초안")
+        print("  + meta.yaml 초안" + (f" (제출 기한 {due})" if due else ""))
     req_p = hw_dir / "requirements.md"
-    text = "\n".join(t.read_text(encoding="utf-8", errors="ignore") for t in sorted((hw_dir / "materials").glob("*.txt")))
-    if not req_p.exists() and text:
-        probs = sorted({m.group(1) for m in re.finditer(r"(?im)^\s*(?:Problem|Prob\.?|문제)\s*(\d+)", text)}, key=int)
-        rows = "\n".join(f"| Problem {n} | 코드 `%% Problem {n}` + 보고서 절 | |" for n in probs)
-        req_p.write_text(f"# HW{int(num)} 요구사항 (자동 추출 초안 — 과제 원문과 대조)\n\n"
-                         f"문제: {', '.join(probs) or '[확인 필요: 과제 PDF에서 문제 번호]'}\n\n"
-                         "| 문제 | 코드·보고서 위치 | 상태 |\n|:--|:--|:--|\n" + rows + "\n", encoding="utf-8")
-        print("  + requirements.md 초안")
+    if req_p.exists() or not text:
+        return
+    # 문제: 'Homework' 뒤의 '1. …' 또는 'Problem 1', '문제 1'
+    hw_part = text[text.find("Homework"):] if "Homework" in text else text
+    probs: dict[str, str] = {}
+    for mm in re.finditer(r"(?ms)^\s*(?:(?:Problem|Prob\.?|문제)\s*)?(\d{1,2})[.)]\s+(.+?)(?=^\s*(?:(?:Problem|문제)\s*)?\d{1,2}[.)]\s|^\s*(?:■|□)?\s*eTL|\Z)", hw_part):
+        body = " ".join(mm.group(2).split())
+        if len(body) > 15 and mm.group(1) not in probs:
+            probs[mm.group(1)] = body[:400]
+    rows = []
+    for n, body in probs.items():
+        limits = "; ".join(re.findall(r"[^.,()]*(?:사용\s*금지|사용하지\s*않고|사용할\s*것|이상의)[^.,()]*", body))
+        rows.append(f"| Problem {n} | {body[:120]}{'…' if len(body) > 120 else ''} | {limits or '-'} | 코드 `%% Problem {n}` + 보고서 절 | |")
+    req_p.write_text(f"# HW{int(num)} 요구사항 (자동 추출 초안 — 과제 원문과 대조)\n\n"
+                     f"제출 기한: {due or '[확인 필요]'}\n\n"
+                     "| 문제 | 내용 | 제약 (지켰는지 `mcode.py check --forbid`로 확인) | 코드·보고서 위치 | 상태 |\n|:--|:--|:--|:--|:--|\n"
+                     + ("\n".join(rows) or "| [확인 필요: 과제 PDF에서 문제] | | | | |") + "\n", encoding="utf-8")
+    print(f"  + requirements.md 초안 (문제 {len(probs)}개)")
 
 
 # ───────────────────────── main ─────────────────────────

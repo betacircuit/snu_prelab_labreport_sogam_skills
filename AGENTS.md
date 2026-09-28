@@ -8,7 +8,7 @@
 | 논설실(논리설계 및 실험) prelab·결과보고서 | `skills/snu-logic-lab/SKILL.md` |
 | 회로이론 및 실험 prelab·결과보고서 | `skills/snu-circuit-lab/SKILL.md` |
 | 전정세 강연 소감문 | `skills/snu-ece-seminar/SKILL.md` |
-| 기초전자기학 및 연습 MATLAB 과제(HW) | `skills/snu-em-hw/SKILL.md` — 실험 보고서가 아니다 |
+| 기전연(기초전자기학 및 연습) 실습 과제 — MATLAB HW | `skills/snu-em-hw/SKILL.md` — 실험 보고서가 아니다 |
 
 모든 스킬이 공통 엔진 `skills/snu-report-core/SKILL.md`를 쓴다. 이 저장소 안에서 쓰면 엔진 `$E` = `skills/snu-report-core/scripts`.
 `.claude/skills`, `.agents/skills`는 `skills/`를 가리키는 바로가기다 (Claude Code·Codex가 스킬을 찾는 자리). 고칠 곳은 `skills/`뿐이다.

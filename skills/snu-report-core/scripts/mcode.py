@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MATLAB 과제 코드 검사·실행·제출 묶음 (기초전자기학 및 연습 HW, snu-em-hw)
 
-  python mcode.py check courses/em/hw01/code/HW1.m       # 제출 규칙 검사
+  python mcode.py check courses/em/hw01/code/HW1.m --problems 1 2 3 --forbid "1:sinc,subplot"   # 제출 규칙·과제 제약 검사
   python mcode.py run   courses/em/hw01/code/HW1.m       # MATLAB(없으면 Octave)로 실행 → figs/figN.png, code/run.log
   python mcode.py pack  courses/em/hw01 [--pdf 파일.pdf]  # 제출용 zip: HW1_이름_학번.zip = PDF + HW1.m
 
@@ -28,8 +28,8 @@ from ws import find_tool, find_workspace  # noqa: E402
 SECTION_RE = re.compile(r"^\s*%%\s*(?:Problem|Prob\.?|P)\s*([0-9]+(?:\.[0-9a-z]+)?|[0-9]+\s*\([a-z]\))", re.I)
 
 
-def check(path: Path, problems: list[str] | None = None) -> tuple[list[str], list[str]]:
-    """→ (오류, 경고)"""
+def check(path: Path, problems: list[str] | None = None, forbid: list[str] | None = None) -> tuple[list[str], list[str]]:
+    """→ (오류, 경고). forbid: ['1:sinc,subplot'] = Problem 1에서 쓰면 안 되는 함수 (과제 제약)"""
     errs, warns = [], []
     if not re.fullmatch(r"HW\d+\.m", path.name):
         errs.append(f"파일 이름 '{path.name}' — HW1.m 꼴이어야 한다")
@@ -59,6 +59,15 @@ def check(path: Path, problems: list[str] | None = None) -> tuple[list[str], lis
             errs.append(f"Problem {num}: 주석이 없다")
         elif len(code) > 6 * len(com):
             warns.append(f"Problem {num}: 코드 {len(code)}줄에 주석 {len(com)}줄 — 무엇을 계산하는지 주석을 더 단다")
+    for rule in forbid or []:
+        num, _, funcs = rule.partition(":")
+        body = next((b for n, b in secs if n == num.strip()), None)
+        if body is None:
+            continue
+        code_only = "\n".join(ln.split("%", 1)[0] for ln in body)   # 주석은 빼고
+        for fn in filter(None, (f.strip() for f in funcs.split(","))):
+            if re.search(rf"(?<![\w.]){re.escape(fn)}\s*\(", code_only):
+                errs.append(f"Problem {num}: 금지된 함수 {fn}()를 썼다 (과제 제약)")
     if problems:
         have = {n for n, _ in secs}
         miss = [p for p in problems if p not in have]
@@ -164,11 +173,12 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check"); c.add_argument("m", type=Path); c.add_argument("--problems", nargs="*")
+    c.add_argument("--forbid", nargs="*", help="과제 제약: '1:sinc,subplot' = Problem 1에서 sinc(), subplot() 금지")
     r = sub.add_parser("run"); r.add_argument("m", type=Path); r.add_argument("--figs", type=Path)
     p = sub.add_parser("pack"); p.add_argument("hw_dir", type=Path); p.add_argument("--pdf", type=Path)
     a = ap.parse_args()
     if a.cmd == "check":
-        errs, warns = check(a.m, a.problems)
+        errs, warns = check(a.m, a.problems, a.forbid)
         for w in warns:
             print("  ⚠", w)
         for e in errs:
