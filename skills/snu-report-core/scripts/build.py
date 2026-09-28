@@ -10,7 +10,9 @@
 사용자에게 주는 결과물은 항상 .docx (수정 가능). PDF 변환·제출은 사용자가 Word에서 한다.
 
 원고 문법 (pandoc markdown + 아래 확장):
-  # 제목               → 자동 번호 "1." / "1.1" (style.yaml numbering.heading)
+  # 제목               → 자동 번호 "1." / "1.1)" (style.yaml numbering.heading)
+  # 4.2 3-bit comparator → "2. 4.2) 3-bit comparator" (가이드북 문항 번호에 ')'를 붙인다, proof.normalize_headings)
+  ## 4.2 가 설계         → "2.1) 가) 설계" (상위 절과 같은 문항 번호는 되풀이하지 않는다)
   # 참고문헌 {-}        → 번호 없는 제목
   ![캡션](figs/a.png){#fig:and width=60%}   → 틀 안 "Fig.1 - 캡션" (style.yaml caption_format)
   Table: 캡션 {#tbl:tt}                      → 표 맨 아래 캡션 행 "Table.1 - 캡션"
@@ -370,6 +372,13 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     from style_check import check as style_check  # 문체 검사 (writing.md)
     for w in style_check(raw):
         print("  문체 ⚠", w, file=sys.stderr)
+    from proof import check_text, docx_text, normalize_headings  # 오탈자 검사 (proofreading.md)
+    raw, head_fixes = normalize_headings(raw)   # 가이드북 문항 번호: '4.2 …' → '4.2) …'
+    for c in head_fixes:
+        print("  제목 번호 고침:", c, file=sys.stderr)
+    for w in check_text(raw):
+        if not w.startswith("[제목 번호]"):
+            print("  오탈자 ⚠", w, file=sys.stderr)
 
     body, warns = preprocess(raw, st)
     for w in warns:
@@ -399,6 +408,9 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     if st.get("title_block", {}).get("mode") == "page" and int(st["page"].get("columns", 1)) > 1:
         one_column_cover(out_docx)
     print("✓", out_docx)
+    for w in check_text(docx_text(out_docx), is_docx=True):   # 빌드 결과를 다시 읽어 확인 (원고 검사와 겹치지 않는 것만)
+        if w.startswith(("[제목 번호]", "[참조]", "[표시]", "[괄호]")):
+            print("  결과물 ⚠", w, file=sys.stderr)
     # 전달용 사본: out/<과목>/파일명.docx (git에 올라가므로 GitHub에서도 받을 수 있다)
     ws = find_workspace(lab_dir)
     if ws:

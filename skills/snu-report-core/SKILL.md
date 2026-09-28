@@ -22,7 +22,9 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 | `references/format.md` | 서식 규칙 (첫 쪽, 글꼴, 표, 그림, 수식, 번호) |
 | `references/writing.md` | 문체 (쓰지 않는 표현, 용어, 수식 배치, 실험 방법·오차 분석 쓰는 법) |
 | `references/evidence.md` | 데이터와 근거 (만들지 않을 것, 묻기 전에 판단할 것, 근거표) |
-| `references/figures.md` | 회로도와 그래프 그리는 법 |
+| `references/figures.md` | 회로도와 그래프 그리는 법, NOR/XOR 구분, **회로 검증 순서** |
+| `references/mistakes.md` | 논설실·회로실험에서 자주 하는 실수와 막는 법 (쓰기 전에 읽는다) |
+| `references/proofreading.md` | **오탈자 검증 순서** (도구 검사 → 결과물 검사 → 대조 읽기) |
 | `references/prelab.md` | prelab 절차 |
 | `references/labreport.md` | lab report 절차 |
 | 과목 스킬의 `references/course.md` | 그 과목의 공통 규칙 (마감, 파일명, 필수 항목, 일정) |
@@ -40,20 +42,25 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 5. **요구 문항을 빠짐없이 답한다.** `courses/<과목>/labNN/requirements.md` 대응표로 대조한다.
 6. **계산은 스크립트로 한다.** 진리표, 간소화, 핀 배선, 평균, 계산값을 손으로 구하지 않는다.
 7. **서식(format.md)과 문체(writing.md)는 사용자가 정한 것이다.** 바꾸라는 말이 있을 때만 바꾼다.
+8. **회로도는 그림 검사와 회로 검증을 통과해야 넣는다** (figures.md). 선이 겹치거나 붙어 가면 안 되고, NOR/XOR처럼 비슷한 게이트는 `c.verify()`로 진리표까지 맞춘다.
+9. **오탈자 검증을 빠짐없이 한다** (proofreading.md). `proof.py`로 원고와 docx를 둘 다 검사하고, 기호·게이트 이름·수치는 눈으로 대조한다.
+10. **요구하지 않은 절을 만들지 않는다.** prelab에 "실험 준비" 절을 따로 두지 않는다 (prelab.md).
 
 ## 작업 순서 (prelab / lab report)
 
 ### 0. 자료 정리 (매번 먼저)
 1. 작업 폴더가 git 저장소면 `git pull`로 사용자가 GitHub 웹에서 `inbox/<과목>/`에 올린 파일을 받는다. 채팅 첨부, 연결된 폴더, Google Drive에 있는 자료도 `inbox/<과목>/`에 넣는다.
-2. `python $E/ingest.py` — `inbox/<과목>/`의 `[Lab NN]`·`LabNN_` 파일을 `courses/<과목>/labNN/`, Lab00은 `courses/<과목>/materials/`로 분류한다. 중복은 버리고 PDF 텍스트를 뽑는다. 파일명에 Lab 번호가 없으면 `--course <과목> --lab NN 파일`.
+2. `python $E/ingest.py` — `inbox/<과목>/`의 파일을 `courses/<과목>/labNN/`, Lab00은 `courses/<과목>/materials/`로 분류한다. 중복은 버리고 PDF 텍스트를 뽑는다.
+   Lab 번호는 파일명(`[Lab 03]`, `Lab03_`, `실험 3`, `실험3`, `Experiment 3`, `예비보고서 3`) → 파일 내용 앞부분(`Lab 3`, `실험 3`) → 날짜(실험일과 같은 주) 순으로 **알아서 찾는다**.
+   그래도 못 찾아 `inbox/<과목>/_unsorted/`에 남으면 사용자에게 묻지 말고, 내가 파일을 열어 주제·날짜를 과목 course.md 일정과 대조해 Lab을 정한 뒤 `--course <과목> --lab NN 파일`로 다시 돌린다. 그 Lab 폴더가 없으면 이때 만들어진다.
 3. 새 Lab이면 `meta.yaml`과 `requirements.md` 초안이 생긴다. 한국어 제목을 채우고, 슬라이드 날짜가 과목 규칙(course.md)과 다르면 규칙을 따르고 사용자에게 한 줄로 알린다.
 4. 작업 폴더가 git 저장소면 분류 결과를 커밋하고 push한다. 마감을 확인한다.
 
 ### A. Prelab — `references/prelab.md`
-문항 확정 → 문항별 도구 실행 → `prelab/prelab.md` → `style_check.py`로 반복 고치기 → `python $E/build.py courses/<과목>/labNN prelab --pdf` → 미리보기 확인 → docx 전달
+문항 확정 → mistakes.md 확인 → 문항별 도구 실행 → 회로도 그리기·그림 검사·회로 검증(figures.md) → `prelab/prelab.md` → `style_check.py`·`proof.py`로 반복 고치기 → `python $E/build.py courses/<과목>/labNN prelab --pdf` → 결과물 오탈자 검증(proofreading.md) → 미리보기 확인 → docx 전달
 
 ### B. Lab report — `references/labreport.md`
-요구사항 확인 → `report/evidence.yaml` → `report/figs/make_figs.py` → `report/report.md` → `style_check.py`로 반복 고치기 → `python $E/build.py courses/<과목>/labNN report --pdf` → 미리보기 확인 → docx 전달
+요구사항 확인 → mistakes.md 확인 → `report/evidence.yaml` → `report/figs/make_figs.py` (그림 검사·회로 검증) → `report/report.md` → `style_check.py`·`proof.py`로 반복 고치기 → `python $E/build.py courses/<과목>/labNN report --pdf` → 결과물 오탈자 검증 → 미리보기 확인 → docx 전달
 
 ## 폴더
 ```
@@ -84,13 +91,14 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 |---|---|
 | `bootstrap.py` | 필요한 것 한 번에 설치: 파이썬 패키지, pandoc, LTspice·ngspice, LTspice MCP와 앱 등록(Claude Code, Codex, Claude 앱), 스킬 등록. `--check`, `--deps-only`, `--dry-run` |
 | `setup_profile.py` | 준비 확인(`--check`: 패키지, 작업 폴더, 빠진 정보), 작업 폴더 만들기(`--init`), 사용자 정보 저장 |
-| `ingest.py` | 자료 자동 분류 (`inbox/<과목>/` → `courses/<과목>/`), 중복 제거, 텍스트 추출, meta·requirements 초안 |
+| `ingest.py` | 자료 자동 분류 (`inbox/<과목>/` → `courses/<과목>/`). Lab 번호를 파일명(`Lab 3`, `실험 3`)·내용·날짜로 찾는다. 중복 제거, 텍스트 추출, meta·requirements 초안 |
 | `evidence.py` | 근거표 검사, 평균·계산값, xlsx 셀 덤프 |
-| `build.py` | 원고 → docx (제목 블록, 절 번호, 표·그림 틀, 수식 공백, 파일명). `prelab`, `report`, `sogam`. `--pdf`로 미리보기 |
+| `build.py` | 원고 → docx (제목 블록, 절 번호와 문항 번호 `)`, 표·그림 틀, 수식 공백, 파일명). `prelab`, `report`, `sogam`. `--pdf`로 미리보기. 문체·오탈자 검사를 같이 돌리고 결과 docx도 다시 검사 |
+| `proof.py` | 오탈자 검사: 조사 받침, 반복 낱말, 게이트 이름 오타, 칩 번호↔게이트(7402=NOR, 7486=XOR), 맞춤법, 단위 띄어쓰기, 기호 표기, 괄호, 제목 번호. `.md`와 `.docx` 둘 다 |
 | `style_check.py` | 문체 검사: 어미·문장 시작·구절 반복, 같은 서술어 반복(어휘), 접속어·추측 남용, 본문 굵은 글씨, 기타 절 분량 (build.py가 자동 실행) |
 | `docx_post.py` | 표 캡션 행, 그림 틀, 열 너비, 문단 앞 공백, `-` 목록, 한글-영문 자동 간격 끄기, Word 호환 모드 해제 (build.py가 호출) |
 | `ooxml_order.py` | 저장 직전 OOXML 스키마 순서 정리 — Word 호환성 검사 경고·"읽을 수 없는 내용" 방지 |
-| `circuit_kit.py` | 회로도(게이트 이름 중앙, 노드 이름 점 옆), 그래프 막대 스타일 |
+| `circuit_kit.py` | 회로도(게이트 이름 중앙, 노드 이름 점 옆), 그래프 막대 스타일. `save()`가 선 겹침·간격·관통·점을 검사하고, `verify()`가 그림의 넷리스트를 기대 식과 진리표로 비교 |
 | `logic.py` | 진리표, SOP/POS 최소화, K-map, 넷리스트 |
 | `pinmap.py` | 넷리스트 → 74xx 칩·핀 배선표 (`--nand-only`) |
 | `timing.py`, `scope.py`, `compare.py` | 예상 파형, 스코프 CSV 측정, 진리표 비교 |
@@ -114,6 +122,7 @@ sys.path.insert(0, str(ENGINE))
 | 쓰는 법 | 결과 |
 |---|---|
 | `# 제목`, `## 소제목` | `1. 제목`, `1.1) 소제목` |
+| `# 4.2) 3-bit comparator`, `## 가) 설계` | `2. 4.2) 3-bit comparator`, `2.1) 가) 설계` — 가이드북 문항 번호에 `)`. 빠뜨려도 build.py가 붙인다 |
 | `# 제목 {-}` | 번호 없는 제목 |
 | `![캡션](figs/a.png){#fig:x width=80%}` | 그림 틀과 `Fig.1 - 캡션` |
 | 표 위에 `Table: 캡션 (단위: ns) {#tbl:x}` | 표 맨 아래 캡션 행 `Table.1 - 캡션` |
@@ -128,6 +137,10 @@ sys.path.insert(0, str(ENGINE))
 - [ ] 모든 수치가 evidence.yaml 또는 스크립트 결과에서 왔다
 - [ ] lab report에 prelab 그림, 비공식 자료, 작업용 표시(`[TODO]` 등)가 없다
 - [ ] `style_check.py` 통과 (어휘 반복 포함), 수식 뒤에서 문장이 이어지지 않는다
+- [ ] `proof.py`가 원고와 docx 둘 다 통과, proofreading.md "눈으로 볼 것"을 확인했다
+- [ ] 모든 회로도가 `c.save()` 그림 검사와 `c.verify()` 회로 검증을 통과했다 (선 겹침 없음, NOR/XOR 등 게이트 종류가 본문·칩 번호와 같다)
+- [ ] mistakes.md의 이번 Lab 주제 항목에 걸리는 것이 없다
+- [ ] 제목의 가이드북 문항 번호가 `4.2)` 꼴이고, 요구하지 않은 절("실험 준비" 등)이 없다
 - [ ] 굵은 글씨는 맨 위 제목과 절 제목에만 있다
 - [ ] 미리보기 PDF를 전 페이지 확인했다
 - [ ] docx 스키마 검사 통과 (`python /mnt/skills/public/docx/scripts/office/validate.py 파일.docx`, 있을 때)

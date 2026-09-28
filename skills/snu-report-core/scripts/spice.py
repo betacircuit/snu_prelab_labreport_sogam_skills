@@ -101,6 +101,8 @@ def lint(path: Path) -> list[str]:
                 val = tok[3]
                 if re.fullmatch(r"\d*\.?\d+M(?![Ee][Gg])\w*", val):
                     issues.append(f"{ln_no}행 {tok[0]}={val}: SPICE에서 M은 밀리(10⁻³)다. 메가면 {val[:-1] if val.endswith('M') else val}Meg")
+                if re.fullmatch(r"\d*\.?\d+[Ff](?:arad)?", val):
+                    issues.append(f"{ln_no}행 {tok[0]}={val}: SPICE에서 숫자 바로 뒤 F는 펨토(10⁻¹⁵)다 — 10uF는 10u, 100nF는 100n처럼 쓴다")
                 if num(val) is None and not val.startswith("{"):
                     issues.append(f"{ln_no}행 {tok[0]}={val}: 값을 읽을 수 없다 (숫자+접미사, 예 4.7k, 100n, 1Meg)")
             if letter in "dqmj" and len(tok) > 1 + n_nodes:

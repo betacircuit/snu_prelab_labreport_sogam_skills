@@ -48,6 +48,7 @@ https://github.com/betacircuit/snu_prelab_labreport_sogam_skills 저장소의 �
 ## 쓰는 법
 
 과제용 폴더를 하나 정해서 거기서 요청해요. 자료는 채팅에 첨부하거나 그 폴더의 `inbox/<과목>/`에 넣으면 된다.
+파일 이름에 `Lab 03`이 없어도 된다 (`실험 3`, `Experiment 3`, 내용 속 번호, 실험 날짜로 알아서 분류한다).
 
 - `논설실 Lab03 prelab 써줘` + 가이드북, 슬라이드
 - `회로이론 Lab02 결과보고서 써줘` + 측정 엑셀, 스코프 사진

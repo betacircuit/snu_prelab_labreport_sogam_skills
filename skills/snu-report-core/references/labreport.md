@@ -32,7 +32,7 @@ python $E/evidence.py courses/<과목>/labNN
    - 실험 방법: 번호 목록 + 이름표 (`1. 회로 연결: …`, 굵게 하지 않음). 장비 설정, 연결, 판독 기준, 반복 횟수, 전이 방향 표기
    - 전이 방향은 모든 표에서 출력 기준으로 적는다 (출력 0→1 = $t_{PLH}$, 1→0 = $t_{PHL}$). 시트 표기가 애매하면 계산값의 대소 관계와 맞는 해석을 고르고 실험 방법에 밝힌다
 3. 실험 결과 — 가이드북 8.x 항목별 절. 관측값과 계산값만 쓰고 해석은 하지 않는다. 자료가 없는 항목은 절을 만들지 않는다.
-4. 토론 및 고찰 — 지정 문항마다 절 하나 (`## 9.2.2 …`).
+4. 토론 및 고찰 — 지정 문항마다 절 하나 (`## 9.2.2) …`, 문항 번호 뒤에 `)`).
    - 현상(수치, 수식) → 원인 → 근거 → 확인 방법
    - 측정값과 계산값·datasheet 값이 다르면 오차 분석을 `- 원인: 설명` 목록으로 쓴다
    - 논리 해석(경로 단 수, hazard)은 `- $B = 0$일 때: …` 경우 나누기 목록과 수식으로 보인다
@@ -40,12 +40,13 @@ python $E/evidence.py courses/<과목>/labNN
 5. 결론 — 핵심 수치 두세 개와 해석 한 줄.
 6. 참고문헌 — 가이드북 외 외부 자료를 인용했을 때만.
 
-문체와 서식은 writing.md, format.md를 따른다. 다 쓰면 `python $E/style_check.py report/report.md`로 반복을 고친다.
+문체와 서식은 writing.md, format.md를 따른다. 다 쓰면 `python $E/style_check.py report/report.md`로 반복을, `python $E/proof.py report/report.md`로 오탈자를 고친다 (proofreading.md).
 
 ## 6. 빌드와 확인
 ```
 python $E/build.py courses/<과목>/labNN report --pdf
 ```
+- `python $E/proof.py build/labNN_학번_이름.docx --strict`가 통과할 때까지 고친다. proofreading.md의 "눈으로 볼 것"을 확인한다.
 - `build/preview/`의 PDF를 전 페이지 이미지로 확인한다 (표·그림·캡션, 수식, 쪽 넘김).
 - 사용자에게는 `build/labNN_학번_이름.docx`를 보낸다.
 
