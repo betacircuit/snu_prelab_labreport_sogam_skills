@@ -167,11 +167,38 @@ def space_math(expr: str) -> str:
     return "".join(out)
 
 
+# ───────────────────────── 수식 글자 세우기 ─────────────────────────
+# 변수만 기울임. 함수 이름(sin, sinc …)과 단위(V/m, F/m, N m^2/C^2 …)는 바로 세운다 (사용자 지적: 과도한 기울임).
+_FUNCS = ("sinh", "cosh", "tanh", "sin", "cos", "tan", "cot", "sec", "csc", "exp", "log", "ln", "arctan", "arcsin", "arccos")
+_FUNC_RE = re.compile(r"(?<![\\A-Za-z])(sinc|" + "|".join(_FUNCS) + r")(?![A-Za-z])")
+_UATOM = r"(?:[pnuµμmckMG]?(?:Hz|Wb|rad|dB|V|A|Ω|F|H|s|m|C|N|J|W|T|S|g|K)|\\Omega)(?:\^\{?-?\d+\}?)?"
+_UNIT_RE = re.compile(r"(?P<pre>[\d}])(?P<sp>\s*(?:\\[ ,;:]|~)\s*|\s+)(?P<u>" + _UATOM +
+                      r"(?:\s*(?:/|\\cdot|\\[ ,;])\s*" + _UATOM + r")*)(?![A-Za-z{])")
+_PROTECT_RE = re.compile(r"\\(?:text|mathrm|operatorname|mathit|mathbf)\s*\{[^{}]*\}")
+
+
+def upright_math(expr: str) -> str:
+    """수식 안 함수 이름은 \\sin·\\operatorname{sinc}로, 숫자 뒤 단위는 \\mathrm{…}으로 (이미 \\text·\\mathrm이면 그대로)."""
+    parts, last = [], 0
+    for m in _PROTECT_RE.finditer(expr):
+        parts.append((expr[last:m.start()], True))
+        parts.append((m.group(0), False))
+        last = m.end()
+    parts.append((expr[last:], True))
+    out = []
+    for seg, edit in parts:
+        if edit:
+            seg = _FUNC_RE.sub(lambda m: r"\operatorname{sinc}" if m.group(1) == "sinc" else "\\" + m.group(1), seg)
+            seg = _UNIT_RE.sub(lambda m: m["pre"] + r"\ " + r"\mathrm{" + re.sub(r"\\ ", r"\\,", m["u"].strip()) + "}", seg)
+        out.append(seg)
+    return "".join(out)
+
+
 def space_all_math(text: str) -> str:
     parts = re.split(r"(```.*?```)", text, flags=re.S)
     for k in range(0, len(parts), 2):
-        parts[k] = MATH_RE.sub(lambda m: (m.group(0)[:2] + space_math(m.group(0)[2:-2]) + m.group(0)[-2:])
-                               if m.group(0).startswith("$$") else "$" + space_math(m.group(0)[1:-1]) + "$", parts[k])
+        parts[k] = MATH_RE.sub(lambda m: (m.group(0)[:2] + space_math(upright_math(m.group(0)[2:-2])) + m.group(0)[-2:])
+                               if m.group(0).startswith("$$") else "$" + space_math(upright_math(m.group(0)[1:-1])) + "$", parts[k])
     return "".join(parts)
 
 NBSP = "\u00a0"
@@ -450,7 +477,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
             if not splits or not break_before_frames(prev_docx, splits[:1], st):
                 break
             out_pdf = to_pdf(prev_docx)
-        print("  미리보기:", out_pdf) if out_pdf.exists() else print("⚠ PDF 변환 실패 (LibreOffice) — docx는 그대로 쓸 수 있다", file=sys.stderr)
+        print("  미리보기:", out_pdf) if out_pdf.exists() else print("⚠ PDF 변환 실패 (LibreOffice) — docx는 그대로 쓸 수 있다. Linux면 Writer가 빠졌을 수 있다: apt install libreoffice-writer", file=sys.stderr)
         if kind == "hw" and out_pdf.exists() and code is not None and code.exists():   # 제출용 PDF와 zip
             shutil.copy2(out_pdf, out_dir / f"{stem}.pdf")
             from mcode import pack

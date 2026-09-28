@@ -280,7 +280,8 @@ def steps(a) -> list[tuple]:
          lambda: pkg_install(brew="ngspice", apt="ngspice")),
         ("pdftotext (선택)", False, MAC or LINUX, lambda: bool(find_tool("pdftotext")),
          lambda: pkg_install(brew="poppler", apt="poppler-utils")),
-        ("LibreOffice (미리보기)", False, a.preview, lambda: bool(find_tool("soffice")),
+        ("LibreOffice (미리보기)", False, a.preview, lambda: bool(find_tool("soffice")) and (not LINUX or any(
+            Path(d, "libswlo.so").exists() for d in ("/usr/lib/libreoffice/program", "/opt/libreoffice/program"))),   # Linux: Writer 없이 core만 깔린 경우
          lambda: pkg_install("TheDocumentFoundation.LibreOffice", cask="libreoffice", apt="libreoffice-writer")),
         ("LTspice MCP (uv, ltspice-mcp)", False, reg and lt and has_mcp_client(), lambda: mcp_exe() is not None, do_uv_mcp),
         ("MCP 등록: Claude Code", False, reg and lt and bool(claude_code()), mcp_registered_claude_code, do_register_claude_code),

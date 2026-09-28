@@ -254,6 +254,8 @@ def classify_hw(path: Path, forced: str | None):
         return num, "submitted", name, why
     if ext == ".m":
         return num, "code", f"HW{int(num)}.m" if re.fullmatch(r"(?i)hw\d+", stem) else name, why
+    if ext in IMG_EXT:   # 사용자 MATLAB 캡처 (코드 화면, 결과 그림) — 컬러 그대로 보고서에 넣는다
+        return num, "figs", name, why
     return num, "materials", name, why
 
 

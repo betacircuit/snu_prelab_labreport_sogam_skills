@@ -78,6 +78,8 @@ size:
   caption: 10.5
   table: 10
   code: 9
+  math: 10                # 문장 속 수식 (Cambria Math는 같은 pt의 본문보다 커 보여서 1pt 작게)
+  math_display: 11        # 따로 한 줄로 뺀 수식
   header_footer: 9
 
 spacing:

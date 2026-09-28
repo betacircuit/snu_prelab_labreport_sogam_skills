@@ -1,7 +1,7 @@
 # 그림 그리기
 
 모든 그림은 `courses/<과목>/labNN/{prelab,report}/figs/make_figs.py` 하나에서 만든다 (다시 돌리면 같은 그림).
-흑백만 쓴다. 그림 글자는 본문과 맞춰 고딕: `circuit_kit.TEXT_FAMILY` (맑은 고딕 → Noto Sans CJK KR → DejaVu Sans), 수식 기호는 `dejavusans`.
+흑백만 쓴다 (논설실·회로이론). **기전연 HW는 예외: 사용자 MATLAB 캡처를 컬러 그대로 쓴다** (snu-em-hw). 사용자가 준 그림·캡처가 있으면 다시 그리지 않고 그걸 쓴다. 그림 글자는 본문과 맞춰 고딕: `circuit_kit.TEXT_FAMILY` (맑은 고딕 → Noto Sans CJK KR → DejaVu Sans), 수식 기호는 `dejavusans`.
 
 ## 회로도 — `scripts/circuit_kit.py`
 가이드라인은 손 그림이나 온라인 도구(circuitlab 등)를 허용한다. 이 skill은 schemdraw + `circuit_kit`으로 그린다:
