@@ -431,6 +431,17 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         text_code = re.search(r"\{\{\s*code\s*:|^```", raw, re.M)
         if text_code and not v.get("code_text"):
             sys.exit("✗ 기전연 보고서에 글자 코드({{code: …}} 또는 ``` 블록)가 있다 — 코드는 MATLAB 화면 사진(figs/p1_code.png)으로 넣는다")
+        # 문제마다 본인이 올린 코드 사진(figs/pN_code…)과 결과 사진(figs/pN_result…)이 있어야 한다
+        missing_photos = []
+        for m in re.finditer(r"(?ms)^#\s+Problem\s+(\d+)\b(.*?)(?=^#\s|\Z)", raw):
+            n, sec = m.group(1), m.group(2)
+            for kind_, label in (("code", "코드 화면"), ("result", "실행 결과")):
+                refs = re.findall(rf"\]\((figs/p{n}_{kind_}[^)\s]*)\)", sec)
+                if not refs:
+                    missing_photos.append(f"문제 {n} {label} 사진 (figs/p{n}_{kind_}.png)")
+                missing_photos += [f"문제 {n} {label} 사진 파일 {r} 없음" for r in refs if not (lab_dir / r).exists()]
+        if missing_photos:
+            sys.exit("✗ 본인이 찍은 MATLAB 사진이 빠졌다 — 대신 그리지 말고 본인에게 받는다:\n  - " + "\n  - ".join(missing_photos))
         from mcode import include_code   # code_text: true일 때만 쓰인다
         raw, missing = include_code(raw, code)
         for k in missing:
