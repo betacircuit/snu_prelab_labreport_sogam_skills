@@ -147,7 +147,7 @@ def space_math(expr: str) -> str:
             continue
         op = next((o for o in _BINOPS if expr.startswith(o, i) and not (o[0] == "\\" and i + len(o) < n and expr[i + len(o)].isalpha())), None)
         prev = "".join(out).rstrip()
-        if op is None and c == "-" and prev and (prev[-1].isalnum() or prev[-1] in "})"):
+        if op is None and c == "-" and prev and (prev[-1].isalnum() or prev[-1] in "})") and not prev.endswith(sp):   # 연산자 바로 뒤의 -는 부호
             op = "-"
         if op:
             while out and out[-1] in (" ", sp):
