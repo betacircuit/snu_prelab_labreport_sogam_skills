@@ -113,7 +113,15 @@ def docx_text(path: Path) -> str:
             sid = style.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "") if style is not None else ""
             if "Code" in sid or "Source" in sid:   # 코드 블록은 글이 아니다
                 continue
-            txt = "".join(t.text or "" for t in el.iter() if t.tag.endswith("}t"))
+            parts = []
+            for r in el.iter():   # 문장 속 코드(`plot(t, y1)`)는 글이 아니라서 뺀다
+                if r.tag == "{http://schemas.openxmlformats.org/officeDocument/2006/math}r":
+                    parts.append("M")   # 수식 글자는 글이 아니다 (⟨M⟩으로 따로 표시)
+                elif r.tag.endswith("}r"):
+                    rs = r.find(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}rStyle")
+                    code = rs is not None and "Verbatim" in rs.get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val", "")
+                    parts.append("C" if code else "".join(t.text or "" for t in r if t.tag.endswith("}t")))
+            txt = "".join(parts)
             # Word 수식(m:t)은 기호 검사에서 수식으로 본다
             has_math = any(t.tag.endswith("}oMath") for t in el.iter())
             lines.append(txt + (" ⟨M⟩" if has_math else ""))

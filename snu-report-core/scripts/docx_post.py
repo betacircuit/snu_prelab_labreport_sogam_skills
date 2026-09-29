@@ -559,6 +559,46 @@ def _upright(r, rpr):
         fonts.set(qn(a), "Cambria Math")
 
 
+_TALL = ("m:f", "m:nary", "m:rad", "m:m", "m:eqArr", "m:limLow", "m:limUpp", "m:groupChr")
+
+
+def flatten_parens(doc) -> int:
+    """늘어나는 괄호(m:d) 중 안에 분수·근호 같은 큰 식이 없는 것을 보통 괄호 글자로 바꾼다.
+    LibreOffice(미리보기·PDF 변환)는 m:d 괄호를 가늘게 그려 세로줄(|t|)처럼 보인다. Word에서도 모양은 같다."""
+    n = 0
+    body = doc.element.body
+    for d in list(body.iter(qn("m:d"))):
+        dpr = d.find(qn("m:dPr"))
+        def chr_of(tag, default):
+            el = dpr.find(qn(tag)) if dpr is not None else None
+            return el.get(qn("m:val"), default) if el is not None else default
+        beg, end = chr_of("m:begChr", "("), chr_of("m:endChr", ")")
+        es = d.findall(qn("m:e"))
+        if (beg, end) not in (("(", ")"), ("[", "]")) or len(es) != 1:
+            continue
+        if any(True for t in _TALL for _ in es[0].iter(qn(t))):
+            continue
+        parent = d.getparent()
+        idx = list(parent).index(d)
+        def paren(ch):
+            r = OxmlElement("m:r")
+            rpr = OxmlElement("m:rPr")
+            sty = OxmlElement("m:sty")
+            sty.set(qn("m:val"), "p")
+            rpr.append(sty)
+            r.append(rpr)
+            t = OxmlElement("m:t")
+            t.text = ch
+            r.append(t)
+            return r
+        new = [paren(beg)] + list(es[0]) + [paren(end)]
+        parent.remove(d)
+        for k, el in enumerate(new):
+            parent.insert(idx + k, el)
+        n += 1
+    return n
+
+
 def postprocess(docx_path, st: dict):
     from docx import Document
 
@@ -575,6 +615,7 @@ def postprocess(docx_path, st: dict):
         res["no_autospace"] = no_autospace(doc)
     if st.get("spacing", {}).get("leading_space", True):
         res["leading_space"] = leading_space(doc)
+    res["parens"] = flatten_parens(doc)
     sz = st.get("size", {})
     res["math_runs"] = math_size(doc, float(sz.get("math", sz.get("body", 11) - 1)),
                                  float(sz.get("math_display", sz.get("body", 11))))

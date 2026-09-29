@@ -380,8 +380,10 @@ def to_pdf(docx_path: Path) -> Path:
 def _placeholder_png(out: Path, title: str, hint: str, fname: str, tall: bool, fill: str):
     import matplotlib
     matplotlib.use("Agg")
+    import logging
     import matplotlib.pyplot as plt
     from circuit_kit import TEXT_FAMILY
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)   # 굵기 없는 글꼴 경고 끄기
     fig = plt.figure(figsize=(8, 3.6 if tall else 4.5), dpi=150)
     fig.patch.set_facecolor("#" + fill)
     lines = ["사진 넣을 곳", title] + ([hint] if hint else []) + [f"({fname})"]
