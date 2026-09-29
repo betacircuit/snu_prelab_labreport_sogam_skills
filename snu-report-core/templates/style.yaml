@@ -1,0 +1,112 @@
+# ──────────────────────────────────────────────────────────────
+#  보고서 스타일 단일 설정 파일
+#  여기만 고치면 모든 prelab / lab report 모양이 같이 바뀐다.
+#  기본값: 사용자 스타일 규칙(2026-09-27)(11pt, 25mm, 1.35, 문단 6pt)
+#  단위: pt(글자/간격), mm(여백)
+# ──────────────────────────────────────────────────────────────
+
+page:
+  size: A4
+  margin_mm: { top: 25, bottom: 25, left: 25, right: 25 }
+  columns: 1              # 2로 바꾸면 본문 2단
+  column_gap_mm: 8
+
+# 첫 쪽: 표지 없이 제목 블록
+#   논리설계 및 실험                          ← 굵게 (두 줄)
+#   실험 1 결과보고서                         ← 굵게
+#   측정 장비의 사용법과 논리 게이트의 이해      ← 부제
+#   7조    2025-12345 홍길동    (조원: 김철수, 이영희)
+#   실험일: 2026년 9월 22일
+# 제목의 \n은 줄바꿈. 두 칸 이상 공백은 em space로 바뀐다. 값이 빈 변수가 들어간 줄은 자동으로 빠진다.
+# 변수: {course} {lab_num} {kind_ko} {title} {team} {student_id} {name} {teammates} {lab_date_ko} {department}
+title_block:
+  mode: block             # block = 첫 쪽 위 제목 블록, page = 별도 표지
+  align: center           # 정보 줄 정렬 (center / right)
+  prelab_title: "{course}\n실험 {lab_num} {kind_ko}"
+  prelab_subtitle: "{title}"
+  prelab_lines:                 # [후보1, 후보2]: 값이 다 채워지는 첫 후보를 쓴다
+    - ["{team}조    {student_id} {name}", "{student_id} {name}"]
+  report_title: "{course}\n실험 {lab_num} {kind_ko}"
+  report_subtitle: "{title}"
+  report_lines:
+    - ["{team}조    {student_id} {name}    (조원: {teammates})", "{team}조    {student_id} {name}", "{student_id} {name}"]
+    - "실험일: {lab_date_ko}"
+  hw_title: "{course}\nHW{lab_num} {kind_ko}"
+  hw_subtitle: "{title}"
+  hw_lines:
+    - "{student_id} {name}"
+  rule: false
+
+# 표·그림 틀 (예시 양식: Table.1 / Fig.1)
+#   표   = 표 맨 아래에 전체 열을 합친 캡션 행
+#   그림 = 1열 2행 테두리 표: 윗칸 그림, 아랫칸 캡션
+#   캡션은 항상 아래, 가운데, 보통 굵기 (굵게는 제목과 절 제목에만). 틀 전체 가운데 정렬
+frames:
+  enabled: true
+  border: single          # 그림 틀 테두리 (single / none)
+  figure_width: full      # full = 본문 폭 전체 틀, fit = 그림 폭에 맞춤
+  caption_bold: false     # 캡션 굵게 여부
+
+table:
+  font_size: 10
+  header_bold: false      # 머리행 글자 굵게 여부 (예시 양식: 보통)
+  header_fill: none       # 머리행 음영 (none 또는 "F2F2F2" 같은 색)
+
+fonts:
+  # 제목과 본문 글꼴 통일: 맑은 고딕 (사용자 지정 2026-09-27, Word 테마 글꼴과 같음).
+  # 영문·숫자도 같은 글꼴로 둔다. 수식은 Word 기본 Cambria Math.
+  body_ko: "맑은 고딕"
+  body_en: "맑은 고딕"
+  heading_ko: "맑은 고딕"
+  heading_en: "맑은 고딕"
+  mono: "DejaVu Sans Mono"   # 코드, 핀 번호
+
+size:
+  body: 11
+  title: 16
+  subtitle: 13
+  meta: 11.5
+  h1: 14                  # 절 제목은 본문보다 크게 + 볼드
+  h2: 12.5
+  h3: 11.5
+  caption: 10.5
+  table: 10
+  code: 9
+  math: 10                # 문장 속 수식 (Cambria Math는 같은 pt의 본문보다 커 보여서 1pt 작게)
+  math_display: 11        # 따로 한 줄로 뺀 수식
+  header_footer: 9
+
+spacing:
+  line: 1.35              # 줄 간격 (배수)
+  para_after: 6           # 문단 뒤 간격 pt
+  h1_before: 14
+  h1_after: 6
+  h2_before: 10
+  h2_after: 4
+  h3_before: 6
+  h3_after: 3
+  first_line_indent: 0    # 들여쓰기 (pt)
+  leading_space: true     # 본문 문단 첫머리에 공백 한 칸 (스페이스바 한 번)
+
+colors:
+  # 글자는 전부 검은색
+  accent: "000000"        # 제목, 표 선
+  text: "000000"
+  muted: "000000"         # 캡션, 쪽 번호
+  marker_fill: "FFF2A8"   # [TODO] [확인 필요] 등 상태 표시 형광펜 (초안에서만 보임)
+
+# 머리말: 둘 다 빈 문자열이면 머리말 없음
+# 변수: {course} {lab} {title} {kind} {name} {student_id}
+header:
+  left: ""
+  right: ""
+footer:
+  center: "page"          # 쪽 번호 (하단 가운데)
+
+numbering:
+  heading: true           # 절 자동 번호
+  heading_formats: ["{0}.", "{0}.{1})", "{0}.{1}.{2})"]   # 1. / 1.1) / 1.1.1)
+  figure_prefix: "Fig"
+  table_prefix: "Table"
+  caption_format: "{prefix}.{n} - {text}"   # 캡션: "Table.1 - 캡션", "Fig.1 - 캡션"
+  ref_format: "{prefix}.{n}"                # 본문 참조: "Table.1", "Fig.1"
