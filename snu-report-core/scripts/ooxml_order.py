@@ -52,6 +52,9 @@ ORDER = {
                       + [qn("sl:schemaLibrary")]
                       + W("shapeDefaults doNotEmbedSmartTags decimalSymbol listSeparator"),
     qn("m:dPr"): M("begChr sepChr endChr grow shp ctrlPr"),
+    qn("m:mathPr"): M("mathFont brkBin brkBinSub smallFrac dispDef lMargin rMargin defJc preSp postSp interSp intraSp wrapIndent wrapRight intLim naryLim"),
+    qn("m:oMathPara"): M("oMathParaPr oMath"),
+    qn("m:r"): M("rPr") + W("rPr") + M("t"),
 }
 ELEMENT_ONLY = set(ORDER) | {qn("w:tblPr"), qn("w:tcPr"), qn("w:trPr")}
 

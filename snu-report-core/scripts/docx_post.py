@@ -650,12 +650,43 @@ def postprocess(docx_path, st: dict):
     res["bullets"] = dash_bullets(doc)
     res["table_alt_removed"] = modern_word(doc)
     res["paragraphs_cleaned"] = clean_paragraphs(doc, st)
+    from math_layout import format_math
+    res["math_layout"] = format_math(doc, st)
+    res["figure_gaps"] = space_after_figures(doc, st)
     res["flow_groups"] = keep_related_content(doc)
     res["black_text"] = force_black_text(doc)
     from ooxml_order import normalize_document
     res["schema_order_fixed"] = normalize_document(doc)
     doc.save(docx_path)
     return res
+
+
+def space_after_figures(doc, st: dict) -> int:
+    """사진+캡션 뒤 본문을 12pt 띄운다. 빈 Enter를 추가하지 않는다."""
+    gap = round(float(st.get("spacing", {}).get("figure_after", 12))*20)
+    count = 0
+    for element in list(doc.element.body):
+        if element.find('.//' + qn('w:drawing')) is None:
+            continue
+        following = element.getnext()
+        if following is not None and p_style(following) == 'ImageCaption':
+            following = following.getnext()
+        if following is None or following.tag != qn('w:p'):
+            continue
+        ppr = _ppr(following)
+        spacing = ppr.find(qn('w:spacing'))
+        if spacing is None:
+            spacing = _set_child(ppr, 'w:spacing')
+        if not p_text(following).strip() and following.find('.//' + qn('w:drawing')) is None:
+            # 두 표 사이의 필수 구분 문단 하나만 간격 역할을 맡는다.
+            spacing.set(qn('w:lineRule'), 'exact')
+            spacing.set(qn('w:line'), str(gap))
+        else:
+            spacing.set(qn('w:before'), str(max(gap, int(spacing.get(qn('w:before'), 0)))))
+            spacing.set(qn('w:beforeAutospacing'), '0')
+            _set_child(ppr, 'w:contextualSpacing', **{'w:val':'0'})
+        count += 1
+    return count
 
 
 def keep_related_content(doc) -> int:

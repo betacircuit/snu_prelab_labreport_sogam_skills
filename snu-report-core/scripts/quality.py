@@ -96,9 +96,11 @@ def check_docx(path: Path) -> dict:
         if z.testzip():
             errors.append("DOCX zip 손상")
     doc = Document(path)
+    from math_layout import layout_issues
+    errors.extend(layout_issues(doc))
     body = doc.element.body
     text = "\n".join(t.text or "" for t in body.iter(qn("w:t")))
-    if STATUS.search(text) or "사진 넣을 곳" in text:
+    if STATUS.search(text) or "사진 넣을 곳" in text or '⟦미제공:' in text:
         errors.append("초안 상태 표시 또는 누락 사진 칸이 남음")
     if re.search(r"\?\?(?:fig|tbl):|@(?:fig|tbl):|\{\{[^}]+\}\}", text):
         errors.append("미해결 그림/표 참조 또는 템플릿 변수가 남음")

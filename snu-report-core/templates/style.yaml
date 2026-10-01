@@ -84,6 +84,10 @@ size:
 spacing:
   line: 1.35              # 줄 간격 (배수)
   para_after: 6           # 문단 뒤 간격 pt
+  figure_after: 12        # 그림+캡션 뒤 본문과의 간격. 빈 Enter 대신 문단 서식
+  math_before: 8
+  math_after: 8
+  math_line: 1.25         # auto 배수: 분수·근호·첨자에 맞춰 높이 확장, 고정 pt 금지
   h1_before: 14
   h1_after: 6
   h2_before: 10

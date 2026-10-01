@@ -4,6 +4,7 @@ pyyaml
 python-docx
 matplotlib
 numpy
+Pillow         # 계측기 사진의 비생성형 보정
 openpyxl
 pymupdf
 kiwipiepy      # 한국어 형태소 분석 (style_check 어휘 반복 검사)

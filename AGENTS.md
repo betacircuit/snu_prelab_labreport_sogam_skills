@@ -6,6 +6,7 @@
 | 논설실 prelab·결과보고서 | `snu-logic-lab/SKILL.md` |
 | 회이실 prelab·결과보고서 | `snu-circuit-lab/SKILL.md` |
 | 기전연 MATLAB 과제 | `snu-em-hw/SKILL.md` (실험 보고서가 아니다) |
+| 오실로스코프·계측기 사진 보정 | `snu-lab-photo/SKILL.md` |
 | 스킬 개선·코드 검토·설치 수정 | 요청된 스킬과 코드. 학생 프로필 초기화/과제 작성은 하지 않는다 |
 
 과목 스킬이 공통 엔진 `snu-report-core/SKILL.md`로 안내한다. 공통 기준과 과목 기준을 읽되 실행 도구는 실제 호스트에 맞춘다.

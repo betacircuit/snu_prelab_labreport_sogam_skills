@@ -18,7 +18,8 @@
         "./snu-report-core",
         "./snu-logic-lab",
         "./snu-circuit-lab",
-        "./snu-em-hw"
+        "./snu-em-hw",
+        "./snu-lab-photo"
       ]
     }
   ]

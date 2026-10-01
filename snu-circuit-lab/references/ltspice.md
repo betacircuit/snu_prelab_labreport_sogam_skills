@@ -1,81 +1,20 @@
-# LTspice — 넷리스트, 검증, 캡처
+# LTspice — 검증, computer-use, 깨끗한 그림
 
-회로이론 prelab·보고서에는 **LTspice 화면 캡처**를 넣는다 (사용자 확인).
-캡처는 LTspice에서 나온 화면이어야 한다. ngspice 그래프를 LTspice 캡처라고 넣지 않는다.
-`$E`는 엔진 `scripts/` 폴더다.
+회로이론 prelab·보고서의 시뮬레이션 그림은 실제 LTspice 출력으로 만든다. `$E`는 공통 엔진의 `scripts/` 폴더다. 측정 사진과 시뮬레이션 그림을 구분한다.
 
-## 순서
-1. **첫 메시지 (한 번에)**
-   - `setup_profile.py --check`의 빠진 정보를 묻는다.
-   - 가이드북이나 슬라이드가 없으면 달라고 한다.
-   - LTspice MCP가 없을 때:
-     - 사용자 PC에서 도는 에이전트(Claude Code, Codex. 셸이 Windows나 macOS)면 묻지 말고 `python $E/bootstrap.py --agent <codex|claude> --yes`를 선택한 호스트로 실행한다. 설치 요청/현재 세션 권한 범위에서 LTspice를 준비하고 해당 AI에만 MCP를 등록한다.
-     - 끝나면 "새 세션에서 MCP가 보인다"고 한 줄 알린다. 이번 세션은 `spice.py run`(LTspice 배치 실행)으로 계속한다.
-     - 클라우드 세션이면 아래 "설치 안내"를 붙인다.
-   - 답을 기다리지 않고 2–3단계를 먼저 한다.
-2. **넷리스트**: 분석마다 파일을 하나씩 쓴다 (`labNN/prelab/sim/<이름>_tran.cir`, `<이름>_ac.cir`, 보고서는 `report/sim/`).
-   - 아래 "공통 문법"을 지킨다.
-   - 입력 진폭과 주파수는 가이드북 값을 쓴다. 가이드북에 없으면 정해서 메시지에 한 줄 밝힌다.
-3. **검증**
-   - `python $E/spice.py lint <파일>` → `python $E/spice.py run <파일>`로 돌린다. LTspice가 깔려 있으면 LTspice 배치 실행, 없으면 ngspice로 돈다 (`--sim`으로 고를 수 있음).
-   - 이론값은 같은 폴더의 `theory.py`(sympy)로 계산해 맞춰 본다.
-     - 과도 응답은 `.meas tran`으로 확인한다.
-     - AC는 `python $E/spice.py value <raw> -t "v(out)" --at 1k`로 크기(dB)와 위상을 읽는다. `.meas ac`는 LTspice와 ngspice의 결과 형식이 달라 쓰지 않는다.
-   - 어긋나면 넷리스트나 계산을 고친다. 둘이 맞아야 다음으로 넘어간다.
-4. **LTspice 실행과 캡처.** 되는 방법 중 위에 있는 것을 쓴다.
-   - LTspice MCP가 있으면 같은 넷리스트를 LTspice로 돌려 3의 값과 같은지 본다. 회로도까지 캡처해야 하면 MCP의 회로도 편집 도구로 `.asc`를 만든다.
-   - 사용자 PC 화면 제어 도구와 연결된 폴더가 있으면, 넷리스트(와 `.asc`)를 그 폴더에 쓰고 LTspice를 열어 직접 캡처한다. MCP가 없어도 된다.
-   - 둘 다 없으면 "캡처 부탁"을 두 번째 메시지로 보내고, `.cir` 파일을 같이 보낸다. 채팅 파일 전송을 쓰고, 안 되면 작업 폴더 git으로 보낸다.
-5. **그림 넣기**
-   - 받은 캡처는 `prelab/figs/`(보고서는 `report/figs/`)에 두고, 캡션에 `LTspice 시뮬레이션`이라고 쓴다.
-   - 측정값과 겹쳐 그리는 보고서 그래프는 LTspice raw를 `spice.py plot`으로 그려도 된다. ngspice raw로 그렸으면 캡션에 `ngspice`라고 밝힌다.
+## 작업 흐름
+1. 현재 과제의 문항·입력·부품·실소자 모델·분석 조건을 먼저 확인한다. 이미 받은 프로필이나 자료를 다시 요구하지 않는다. 스킬 개선 요청에서는 프로필 초기화와 과제 자료 요청을 하지 않는다.
+2. 분석마다 `.cir` 또는 `.asc` 파일을 만든다. 과제 `prelab/sim/` 또는 `report/sim/`에 두고 원문 조건을 기록한다. 이론 모델만으로 실소자 시뮬레이션을 완료했다고 말하지 않는다.
+3. `spice.py lint <파일>`과 `spice.py run <파일>`로 수치를 확인한다. LTspice 배치 실행을 우선하고, ngspice는 호환 가능한 보조 검증에만 쓴다. 과도 응답은 `.meas tran`, AC는 `spice.py value <raw> -t "v(out)" --at 1k`로 읽는다. 이론값과 다른 경우 모델·설정·측정 위치 차이를 설명하거나 수정한다.
+4. **[computer-use 화면 절차](ltspice-computer-use.md)를 읽고 LTspice GUI를 직접 조작한다.** 회로 연결·노드·Run 결과·신호 이름·축 범위를 확인하고 앱 자체 이미지 출력으로 저장한다. MCP가 없다는 이유만으로 새 세션이나 MCP 설치부터 요구하지 않는다. 제공된 Windows computer-use 스킬도 확인하기 전에는 GUI 작업이 불가능하다고 판단하지 않는다.
+5. `.asc`·`.cir`·모델·`.raw`·`.log`와 최종 그림을 함께 보관한다. 보고서용 PNG를 열어 포인터·후광·메뉴·잘린 축이 없고, 채널이 색 또는 선 모양으로 구분되는지 확인한다. 파형과 측정 수치를 `spice.py`로 읽은 값에 대조한다.
+6. 검토한 그림만 `prelab/figs/` 또는 `report/figs/`에 넣고 캡션에 `LTspice 시뮬레이션`이라고 쓴다. 측정값과 비교한 별도 raw 데이터 그래프라면 실제 생성 방식과 시뮬레이터를 밝힌다.
 
-캡처 부탁 (파일 이름, 띄울 신호, 기대값을 채워서 보낸다):
-```
-LTspice에서 lab03_rc_tran.cir를 열고(File → Open, 파일 형식 Netlists) ▶ Run을 눌러 줘.
-파형 창에서 V(in), V(out)을 띄우고(오른쪽 클릭 → Add Traces), Win + Shift + S로 창을 캡처해서
-inbox/circuit/에 "[Lab 03] ltspice_rc_tran.png"로 올려 줘. t = 1 ms에서 V(out)이 약 3.16 V면 맞아.
-```
-회로도를 직접 그려야 하면 `python $E/spice.py nodes <파일>`의 소자·노드 연결표를 같이 준다.
-
-## MCP 확인
-도구 목록에 `ltspice` 서버의 도구가 있으면 쓴다. 도구 이름은 버전마다 다르니 서버 이름으로 찾는다.
-클라우드 세션에서는 사용자 PC의 로컬 MCP가 기기 연결 도구를 거쳐 보인다. 이 경우 그 PC에서 데스크톱 앱이 켜져 있고 대화가 PC에 연결돼 있어야 한다.
-
-## 설치 안내 (클라우드 세션에서 MCP가 없을 때 첫 메시지에 붙인다)
-가장 쉬운 방법은 사용자 PC의 Claude Code나 Codex에 README의 "PC에 한 번에 설치" 프롬프트를 붙여 넣는 것이다. 그러면 `bootstrap.py`가 아래를 전부 한다.
-직접 설치하려는 사용자에게는 OS와 쓰는 앱에 맞는 것만 보낸다.
-
-**Windows (PowerShell)**
-```
-winget install AnalogDevices.LTspice
-winget install --id=astral-sh.uv -e
-```
-PowerShell을 새로 연 뒤:
-```
-uv tool install ltspice-mcp
-uv tool dir --bin
-```
-마지막 줄이 보여 준 폴더 끝에 `\ltspice-mcp.exe`를 붙인 것이 실행 파일 경로다 (예: `C:\Users\<이름>\.local\bin\ltspice-mcp.exe`).
-
-**macOS**: LTspice는 analog.com LTspice 페이지에서 받는다. `brew install uv` → `uv tool install ltspice-mcp` → `uv tool dir --bin`.
-
-**앱에 등록 (쓰는 앱 하나만)**
-- Claude 앱(데스크톱, 또는 PC에 연결한 클라우드 대화)
-  1. 설정 → 개발자 → 구성 편집으로 `claude_desktop_config.json`을 연다.
-  2. 파일이 비어 있거나 `mcpServers`가 없으면 아래 전체를 넣는다. 이미 `mcpServers`가 있으면 그 안에 `"ltspice": {…}` 한 항목만 추가한다.
-  3. 경로는 `\` 대신 `/`로 쓴다.
-  4. 트레이에서 앱을 완전히 종료하고 다시 연다.
-  ```json
-  { "mcpServers": { "ltspice": { "command": "C:/Users/<이름>/.local/bin/ltspice-mcp.exe", "args": [] } } }
-  ```
-- Claude Code (터미널): `claude mcp add --scope user ltspice -- ltspice-mcp`
-- Codex: `codex mcp add ltspice -- ltspice-mcp`
-
-**알려 줄 것 (한 줄씩)**
-- `ltspice-mcp`는 Analog Devices 공식이 아니라 개인이 만든 오픈소스다 (GPL-3.0, https://github.com/cognitohazard/ltspice-mcp).
-- `run_code` 도구는 PC에서 파이썬을 실행한다. 쓸 때마다 허락하고 "항상 허용"은 누르지 않는다.
-- 설치가 끝나면 알려 달라고 한다. 도구가 보이면 4단계를 MCP로 다시 한다.
+## 호스트와 도구 선택
+- **Codex**: 설치된 computer-use 스킬과 현재 API를 따른다. Windows에서는 `node_repl` + `@oai/sky`로 앱을 조작한다. [Codex 실행 흐름](../../snu-report-core/references/runtime-codex.md)을 따른다.
+- **Claude**: 해당 환경의 computer-use를 사용한다. Codex 패키지나 경로를 가정하지 않는다.
+- **LTspice MCP**: 사용 가능하면 파일 생성·모델 확인·배치 실행의 보조 수단으로 쓴다. 사용자가 MCP 방식을 명시하면 그 선택을 따른다. GUI와 연결 도구가 모두 없을 때만 필요한 회로/파형 캡처를 묶어 요청하고, 작성 가능한 초안은 진행한다.
+- **설치**: LTspice 자체가 없을 때 현재 호스트·권한 범위에서 설치한다. MCP 추가가 필요한 요청에만 `bootstrap.py --agent codex|claude --yes`를 사용한다. 다른 AI의 설정은 변경하지 않는다.
 
 ## 공통 문법 (LTspice와 ngspice 모두에서 돌아가는 넷리스트)
 `spice.py lint`가 아래를 검사한다.

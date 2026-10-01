@@ -1,0 +1,4 @@
+interface:
+  display_name: "실험 사진 보정"
+  short_description: "오실로스코프 사진의 반사·기울기·선명도를 보정하고 원본과 대조"
+  default_prompt: "$snu-lab-photo로 측정값과 파형을 보존하면서 이 오실로스코프 사진의 가독성을 개선해 줘."
