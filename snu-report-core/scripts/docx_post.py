@@ -609,6 +609,12 @@ def postprocess(docx_path, st: dict):
     if cols > 1:
         usable_tw = (usable_tw - st["page"]["column_gap_mm"] * TW_PER_MM) / cols
     res = {}
+    # 사진의 비율을 유지하고 그림+캡션이 한 쪽을 넘지 않게 한다.
+    section = doc.sections[0]
+    max_w = int(section.page_width - section.left_margin - section.right_margin) - 120000
+    max_h = int((section.page_height - section.top_margin - section.bottom_margin) *
+                float(st.get("frames", {}).get("max_height_fraction", 0.80)))
+    res["images_resized"] = fit_images(doc, max_w, max_h)
     if st.get("frames", {}).get("enabled", True):
         res["frames"] = frame_all(doc, st, usable_tw)
     if not st.get("spacing", {}).get("auto_space_latin", False):
@@ -627,9 +633,28 @@ def postprocess(docx_path, st: dict):
     return res
 
 
-# ───────────────────────── 미리보기(PDF) 전용: 쪽 갈림 보정 ─────────────────────────
+def fit_images(doc, max_width: int, max_height: int) -> int:
+    """wp と DrawingML の両寸法を同じ比率で縮める。拡大はしない。"""
+    count = 0
+    for inline in doc.element.body.iter(qn("wp:inline")):
+        extent = inline.find(qn("wp:extent"))
+        if extent is None:
+            continue
+        width, height = int(extent.get("cx")), int(extent.get("cy"))
+        if width <= 0 or height <= 0:
+            continue
+        scale = min(1.0, max_width / width, max_height / height)
+        if scale < 1:
+            for element in [extent, *inline.findall(".//" + qn("a:xfrm") + "/" + qn("a:ext"))]:
+                element.set("cx", str(int(width * scale)))
+                element.set("cy", str(int(height * scale)))
+            count += 1
+    return count
+
+
+# ───────────────────────── 실제 DOCX의 쪽 갈림 보정 ─────────────────────────
 # Word는 keepNext/cantSplit으로 표·캡션을 같은 쪽에 두지만 LibreOffice는 무시한다.
-# 제출용 docx는 건드리지 않고, 미리보기 PDF를 만들 때 사본에만 쪽 나누기를 넣는다.
+# 검토하는 DOCX와 전달하는 DOCX가 같아야 하므로 원본에 쪽 나누기를 넣는다.
 def _caption_regex(st: dict):
     num = st["numbering"]
     head = num.get("caption_format", "{prefix}.{n} - {text}").split("{text}")[0]
@@ -678,6 +703,9 @@ def break_before_frames(docx_path, targets, st: dict) -> int:
         m = rx.match(p_text(rows[-1]).strip()) if rows else None
         if not m or (m.group(1), int(m.group(2))) not in targets:
             continue
+        previous = tbl.getprevious()
+        if previous is not None and previous.find(".//" + qn("w:pageBreakBefore")) is not None:
+            continue  # 같은 틀 앞에 페이지 나누기를 반복 삽입하지 않는다.
         p = _el("w:p")
         ppr = _el("w:pPr")
         ppr.append(_el("w:pageBreakBefore"))

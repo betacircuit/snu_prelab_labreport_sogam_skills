@@ -1,0 +1,4 @@
+interface:
+  display_name: "기초전자기학 MATLAB 과제"
+  short_description: "기전연 본인 MATLAB 화면과 원본 코드로 제출 보고서 작성"
+  default_prompt: "$snu-em-hw로 첨부 자료의 문항과 근거에 맞는 보고서를 작성해 줘."

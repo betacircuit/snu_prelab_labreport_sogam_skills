@@ -79,11 +79,11 @@ def check_deps(course: str | None = None) -> list[str]:
     need = []
     miss = [pkg for mod, pkg in PY_MODULES.items() if importlib.util.find_spec(mod) is None]
     if miss:
-        need.append(f"need: python 패키지 {', '.join(miss)} — {BOOT}")
+        need.append(f"need: python 패키지 {', '.join(miss)} — {BOOT} --agent <codex|claude>")
     if not find_tool("pandoc"):
-        need.append(f"need: pandoc (docx 변환) — {BOOT}")
+        need.append(f"need: pandoc (docx 변환) — {BOOT} --agent <codex|claude>")
     if course == "circuit" and not (find_tool("ltspice") or find_tool("ngspice")):
-        need.append(f"need: SPICE 시뮬레이터 (Windows·macOS는 LTspice, Linux는 ngspice) — {BOOT}")
+        need.append(f"need: SPICE 시뮬레이터 (Windows·macOS는 LTspice, Linux는 ngspice) — {BOOT} --agent <codex|claude>")
     return need
 
 

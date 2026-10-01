@@ -13,6 +13,8 @@ description: 서울대 전기정보공학부 「기초전자기학 및 연습」
 - 과제는 실습 자료 PDF 끝의 **Homework** 절(문제 1., 2., 3.)과 **eTL 제출** 쪽, 마감은 앞쪽 "제출 기한"에 있다.
 - 쓰기 전에 `references/mistakes.md`(MATLAB·전자기 실수)와 엔진의 공통 `references/mistakes.md`를 읽는다.
 
+공통 엔진의 **실행 호스트 분기**를 먼저 적용한다. Codex는 runtime-codex.md, Claude는 runtime-claude.md만 읽는다.
+
 ## 이 과목에서 엔진 규칙과 다른 것 (사용자 지정 — 어기면 안 된다)
 1. **코드는 MATLAB 화면 사진으로만 넣는다.** 보고서에 MATLAB 코드를 글자(코드 블록)로 넣지 않는다. 빌드가 `{{code:}}`와 ``` 블록을 막는다.
 2. **MATLAB 코드를 내가 쓰거나 고치지 않는다.** 코드·주석·결과는 전부 본인(학생)이 MATLAB에서 만든 것이다. `HW1.m`은 받은 그대로 zip에 넣는다.
@@ -69,10 +71,10 @@ courses/em/hw01/
 6. `python $E/build.py courses/em/hw01 hw --pdf`
    - 문체·오탈자·수식 배치·코드 검사를 같이 돌린다. `[수식]` 경고는 전부 고친다.
    - 빌드가 멈추는 경우: 글자 코드, `[본인 글]` 표현. 사진 파일이 없으면 멈추지 않고 노란 칸을 넣고 받아야 할 사진 목록을 보여 준다 (`--final`이면 멈춘다).
-   - 노란 칸이나 `[확인 필요]`가 남아 있으면 제출용 zip은 만들지 않는다. 사진이 다 오고 `[확인 필요]`를 다 채운 뒤 `--final --pdf`로 다시 빌드한다.
-   - PDF 변환이 되면 `build/`와 `out/em/`에 `HW1_이름_학번.pdf`와 제출용 `HW1_이름_학번.zip`(PDF + `HW1.m`)이 생긴다.
-   - 변환이 안 되면 docx와 `HW1.m`을 보내고, 사용자가 Word에서 PDF로 저장한 뒤 `python $E/mcode.py pack courses/em/hw01 --pdf <PDF>`로 zip을 만든다.
-7. 미리보기 PDF 전 페이지를 **직접 보고** (PDF 변환이 안 되는 환경이면 사용자에게 Word에서 한 번 봐 달라고 한 줄 알린다) 아래 "보기 전에 확인"을 하나씩 대조한 뒤 전달한다: zip(있으면), docx, HW1.m.
+   - 노란 칸이나 `[확인 필요]`가 남아 있으면 제출용 zip은 만들지 않는다. 사진과 `HW1.m`이 다 오면 Homework 원문 범위와 문제별 답변을 `requirements.yaml`의 `scope.hw`, `kind: hw` 문항으로 기록하고 `--final`로 다시 빌드한다.
+   - 생성물은 `out/drafts/em/`의 초안이며, PDF를 생성했더라도 아직 최종 전달본은 아니다.
+7. 선택한 호스트의 `quality.py render`로 실제 DOCX를 렌더링하고 모든 쪽을 **직접 읽어** 아래 항목을 대조한다. `quality.py review <DOCX> --pages 1,2,...` → `quality.py deliver <DOCX> --lab-dir courses/em/hw01 --kind hw`를 통과하면 `out/em/`에 검토한 DOCX·PDF·원본 `HW1.m`·zip이 생긴다.
+   - 렌더링이 불가능하면 초안 DOCX와 본인 코드 파일을 주고 미검증 부분을 알린다. 사용자가 Word에서 PDF를 저장해 직접 묶으려는 경우에는 기존 `mcode.py pack ... --pdf <PDF>`를 쓸 수 있으며, 이를 AI의 렌더링 검증 완료로 주장하지 않는다.
 
 ## 수식
 문장 속 수식은 기호와 짧은 식만. 분수·괄호 나눗셈·긴 식은 문장을 끝내고 다음 줄에 `$$…$$`로 뺀다. 따로 뺀 줄에는 식 하나(많아야 둘).

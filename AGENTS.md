@@ -1,26 +1,31 @@
-# snu_prelab_labreport_skills
+# SNU 전기정보공학부 과제 스킬
 
-서울대 전기정보공학부 과제(실험 보고서, MATLAB 과제) 스킬 저장소. 요청에 맞는 과목 스킬의 SKILL.md를 먼저 읽고 그대로 따른다.
-(이 파일이 원본이다. CLAUDE.md는 이 파일을 불러오기만 한다 — 여기만 고친다.)
-
-| 요청 | 스킬 (저장소 맨 위 폴더) |
+## 작업 선택
+| 요청 | 읽을 스킬 |
 |---|---|
-| 논설실(논리설계 및 실험) prelab·결과보고서 | `snu-logic-lab/SKILL.md` |
-| 회이실(회로이론 및 실험) prelab·결과보고서 | `snu-circuit-lab/SKILL.md` |
-| 기전연(기초전자기학 및 연습) 실습 과제 — MATLAB HW | `snu-em-hw/SKILL.md` — 실험 보고서가 아니다 |
+| 논설실 prelab·결과보고서 | `snu-logic-lab/SKILL.md` |
+| 회이실 prelab·결과보고서 | `snu-circuit-lab/SKILL.md` |
+| 기전연 MATLAB 과제 | `snu-em-hw/SKILL.md` (실험 보고서가 아니다) |
+| 스킬 개선·코드 검토·설치 수정 | 요청된 스킬과 코드. 학생 프로필 초기화/과제 작성은 하지 않는다 |
 
-모든 스킬이 공통 엔진 `snu-report-core/SKILL.md`를 쓴다. 이 저장소 안에서 쓰면 엔진 `$E` = `snu-report-core/scripts`.
-`.claude/skills`, `.agents/skills`는 위 폴더를 가리키는 바로가기다 (Claude Code·Codex가 스킬을 찾는 자리). 고칠 곳은 맨 위 `snu-*` 폴더뿐이다.
+과목 스킬이 공통 엔진 `snu-report-core/SKILL.md`로 안내한다. 공통 기준과 과목 기준을 읽되 실행 도구는 실제 호스트에 맞춘다.
 
-## 시작할 때
-`python snu-report-core/scripts/setup_profile.py --check --course <logic|circuit|em>`
-- `need:` 줄은 묻지 않고 처리한다 (`bootstrap.py --yes --deps-only`로 설치, `--init`으로 작업 폴더 만들기).
-- 사용자 PC에서 처음 설치할 때는 `python snu-report-core/scripts/bootstrap.py --yes` (스킬·LTspice MCP 등록까지).
-- `missing:` 줄(이름, 학번, 조)만 사용자에게 한 번에 묻고 저장한다.
+## AI 실행 분기
+- **Codex**: `snu-report-core/references/runtime-codex.md`. 설치·갱신은 `bootstrap.py --agent codex`. Claude 플러그인·Claude 앱 설정을 수정하지 않는다.
+- **Claude**: `CLAUDE.md`와 `snu-report-core/references/runtime-claude.md`. 설치·갱신은 `bootstrap.py --agent claude`. Codex 설정을 수정하지 않는다.
+- 호스트가 둘 다 설치됐다는 이유로 두 흐름을 실행하지 않는다. 둘 다 설치해 달라는 요청에는 `--agent all`을 쓴다.
 
-## 지킬 것
-- **공개 저장소다.** `profile.yaml`, `courses/`, `inbox/`, `out/`(개인 정보, 수업 자료, 작업물)은 `.gitignore`로 막혀 있다. 강제로 커밋하지 않는다.
-- 결과물은 `.docx`로 채팅에 보낸다. 기전연 HW는 `.docx`와 `HW1.m`, 사진이 다 오고 PDF로 바꿀 수 있으면 제출용 `.zip`까지.
-- 측정값, 관찰 결과, 코드 실행 결과는 지어내지 않는다. 본인이 찍어야 하는 사진이 아직 없으면 노란 '사진 넣을 곳' 칸으로 두고 보고서를 먼저 완성한다.
-- 회로도는 `circuit_kit`의 그림 검사(`save`)와 회로 검증(`verify`)을, 보고서는 `proof.py` 오탈자 검증을, MATLAB 코드는 `mcode.py check`를 통과해야 보낸다.
-- 작업 브랜치는 `featurejwon` 하나다. 새 브랜치를 만들지 않는다. 끝나면 `main`에도 올린다.
+`.agents/skills`, `.claude/skills`는 각 AI의 작은 진입 문서다. 실제 규칙·코드는 맨 위 `snu-*` 폴더가 원본이다. 진입 문서는 Windows의 symlink 설정 없이도 탐색할 수 있는 실제 폴더로 유지한다.
+
+## 보고서 완료 기준
+- 원문 문항·실험 범위·수치의 근거를 먼저 확인한다. 측정·관찰·실행 결과를 지어내지 않는다.
+- 회로도는 그림 검사와 회로 검증을, 원고/결과물은 오탈자 검사를 거친다. 과제 범위가 미확정이거나 자료가 빠졌으면 초안으로 명시한다.
+- `build.py` 성공만으로 완료하지 않는다. `requirements.yaml` 대응 검사 → 실제 전달 DOCX 렌더링 → 모든 쪽 이미지 읽기 → `quality.py review` → `quality.py deliver`를 거친다.
+- 최종 DOCX는 검토한 파일과 같아야 한다. 수정 후 다시 렌더링한다. 문서 내용/레이아웃 검증이 불가능한 부분은 사용자에게 밝힌다.
+- 스킬 공개 저장소에 개인정보·교재·측정 사진·사용자 보고서를 올리지 않는다. `profile.yaml`, `courses/`, `inbox/`, `out/`는 git 제외다.
+
+## 저장소 수정
+- 작업 브랜치는 `featurejwon`이다. 새 이름의 브랜치를 만들지 않는다.
+- 코드 변경은 `python -m unittest discover -s tests -v`, 스킬 frontmatter 검증, 변경 파일 검토를 마친다.
+- 이 저장소 변경은 완료 후 `main`에도 반영한다. 원격이 앞서 있거나 다른 변경이 있으면 먼저 확인하며 강제 push하지 않는다.
+- 수업 원자료·첨부 보고서는 로컬 검토에만 쓴다. 공개 테스트에는 가상 자료만 사용한다.

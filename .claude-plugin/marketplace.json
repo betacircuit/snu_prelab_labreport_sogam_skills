@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "서울대 전기정보공학부 과제 스킬 — 논설실·회로이론 실험 prelab/결과보고서, 기전연 MATLAB 과제 (.docx)",
-    "version": "2.0.0"
+    "version": "2.1.0"
   },
   "plugins": [
     {
       "name": "snu-reports",
       "description": "논리설계 및 실험(논설실), 회로이론 및 실험(회이실)의 prelab·결과보고서, 기초전자기학 및 연습(기전연) MATLAB 과제를 만든다. 처음 한 번 이름·학번·조만 묻는다.",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./",
       "strict": false,
       "skills": [

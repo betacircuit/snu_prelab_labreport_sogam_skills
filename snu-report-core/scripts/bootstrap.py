@@ -2,13 +2,15 @@
 """과제 스킬에 필요한 것을 한 번에 설치한다 — 사용자 PC에서 Claude Code·Codex가 돌리는 용도.
 
   python bootstrap.py --check      # 있는 것과 없는 것만 본다 (필수가 빠지면 exit 1)
-  python bootstrap.py --yes        # 없는 것을 전부 설치한다 (묻지 않음)
+  python bootstrap.py --agent codex --yes  # Codex 대상으로 설치 (Claude는 --agent claude)
   python bootstrap.py              # 설치 목록을 보여 주고 y/N을 묻는다
   python bootstrap.py --dry-run    # 실행할 명령만 보여 준다
 
   --no-ltspice   LTspice·LTspice MCP를 건너뛴다 (회로이론을 안 들을 때)
   --preview      LibreOffice도 설치한다 (미리보기 PDF용, 용량이 큼)
   --deps-only    프로그램만 설치하고 MCP·스킬 등록은 건너뛴다 (클라우드 세션에서 쓸 때)
+  --skills-only  선택한 AI의 스킬만 설치/갱신한다 (패키지·MCP 변경 없음)
+  --agent        codex | claude | all | auto (세션 신호로 판단, 모호하면 명시)
 
 설치하는 것 (있으면 건너뛴다. 다시 돌려도 안전하다)
   1. 파이썬 패키지 (requirements.txt)          5. uv, ltspice-mcp (LTspice MCP 서버)
@@ -32,13 +34,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ws import ENGINE, SKILLS_DIR, find_tool  # noqa: E402
 
-REPO = "betacircuit/snu_prelab_labreport_skills"
+REPO = "betacircuit/snu_prelab_labreport_sogam_skills"
 MARKET, PLUGIN = "snu-ece-skills", "snu-reports"
 SKILL_NAMES = sorted(p.name for p in SKILLS_DIR.iterdir() if (p / "SKILL.md").exists())   # 저장소 맨 위의 스킬 폴더 전부 (새 과목을 넣으면 자동)
 REQUIREMENTS = ENGINE.parent / "requirements.txt"
 PY_MODULES = ["yaml", "docx", "sympy", "schemdraw", "matplotlib", "numpy", "openpyxl", "fitz", "kiwipiepy", "spicelib"]
 WIN, MAC, LINUX = sys.platform == "win32", sys.platform == "darwin", sys.platform.startswith("linux")
-HOME = Path.home()
+USER_ROOT = Path.home()
 DRY = False
 
 
@@ -133,16 +135,16 @@ def mcp_exe() -> str | None:
 
 def claude_desktop_config() -> Path | None:
     if WIN:
-        d = Path(os.environ.get("APPDATA", HOME / "AppData/Roaming")) / "Claude"
+        d = Path(os.environ.get("APPDATA", USER_ROOT / "AppData/Roaming")) / "Claude"
     elif MAC:
-        d = HOME / "Library/Application Support/Claude"
+        d = USER_ROOT / "Library/Application Support/Claude"
     else:
         return None
     return d / "claude_desktop_config.json" if d.exists() else None
 
 
 def codex_present() -> bool:
-    return bool(exe("codex")) or (HOME / ".codex").exists()
+    return bool(exe("codex")) or (USER_ROOT / ".codex").exists()
 
 
 def claude_code() -> str | None:
@@ -155,7 +157,7 @@ def mcp_registered_claude_code() -> bool:
 
 
 def mcp_registered_codex() -> bool:
-    cfg = HOME / ".codex/config.toml"
+    cfg = USER_ROOT / ".codex/config.toml"
     return cfg.exists() and "[mcp_servers.ltspice]" in cfg.read_text(encoding="utf-8", errors="replace")
 
 
@@ -177,12 +179,22 @@ def plugin_installed() -> bool:
     return f"{PLUGIN}@{MARKET}" in r.stdout
 
 
+SKILL_ROOT: Path | None = None
+
+
 def codex_skills_dir() -> Path:
-    return HOME / ".agents/skills"
+    return SKILL_ROOT or USER_ROOT / ".agents/skills"
 
 
 def codex_skills_installed() -> bool:
-    return all((codex_skills_dir() / n / "SKILL.md").exists() for n in SKILL_NAMES)
+    for name in SKILL_NAMES:
+        for source in (SKILLS_DIR / name).rglob("*"):
+            if not source.is_file() or any(part in ("__pycache__", "build", "evals") for part in source.parts) or source.suffix == ".pyc":
+                continue
+            target = codex_skills_dir() / name / source.relative_to(SKILLS_DIR / name)
+            if not target.is_file() or source.read_bytes() != target.read_bytes():
+                return False
+    return True
 
 
 # ───────── 설치 동작 ─────────
@@ -205,7 +217,7 @@ def do_register_claude_code() -> bool:
 
 def do_register_codex() -> bool:
     path = (mcp_exe() or "ltspice-mcp").replace("\\", "/")
-    cfg = HOME / ".codex/config.toml"
+    cfg = USER_ROOT / ".codex/config.toml"
     print(f"  + {cfg}에 [mcp_servers.ltspice] 추가")
     if DRY:
         return True
@@ -259,18 +271,34 @@ def do_codex_skills() -> bool:
             continue
         if dst.is_symlink() or dst.is_file():
             dst.unlink()
-        elif dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "build", "evals"))
+        elif getattr(dst, "is_junction", lambda: False)():
+            raise RuntimeError(f"{dst}는 다른 폴더의 junction이다 — 명시적인 --skill-root를 사용한다")
+        # 기존 설치에 사용자가 추가한 파일을 지우지 않는다.
+        shutil.copytree(src, dst, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "build", "evals"))
     return True
+
+
+def selected_agent(requested: str, environ: dict | None = None) -> str:
+    """현재 호스트의 세션 신호만 사용한다. 앱 설치 여부는 호스트 신호가 아니다."""
+    if requested != "auto":
+        return requested
+    env = os.environ if environ is None else environ
+    codex = bool(env.get("CODEX_THREAD_ID") or env.get("CODEX_SANDBOX") or env.get("CODEX_CI"))
+    claude = bool(env.get("CLAUDECODE") or env.get("CLAUDE_CODE_ENTRYPOINT"))
+    if codex != claude:
+        return "codex" if codex else "claude"
+    raise ValueError("현재 AI를 구별할 수 없음 — --agent codex 또는 --agent claude를 지정한다 (두 앱 설치는 --agent all)")
 
 
 # (이름, 필수, 대상인지, 이미 됐는지, 설치)
 def steps(a) -> list[tuple]:
     lt = not a.no_ltspice and (WIN or MAC)
     reg = not a.deps_only
-    has_mcp_client = lambda: bool(claude_code()) or codex_present() or claude_desktop_config() is not None  # noqa: E731
-    return [
+    use_codex = a.agent in ("codex", "all")
+    use_claude = a.agent in ("claude", "all")
+    has_mcp_client = lambda: (use_claude and (bool(claude_code()) or claude_desktop_config() is not None)) or use_codex  # noqa: E731
+    plan = [
         ("파이썬 패키지", True, True, lambda: not missing_modules(), do_python),
         ("pandoc", True, True, lambda: bool(find_tool("pandoc")),
          lambda: pkg_install("JohnMacFarlane.Pandoc", brew="pandoc", apt="pandoc")),
@@ -284,16 +312,18 @@ def steps(a) -> list[tuple]:
             Path(d, "libswlo.so").exists() for d in ("/usr/lib/libreoffice/program", "/opt/libreoffice/program"))),   # Linux: Writer 없이 core만 깔린 경우
          lambda: pkg_install("TheDocumentFoundation.LibreOffice", cask="libreoffice", apt="libreoffice-writer")),
         ("LTspice MCP (uv, ltspice-mcp)", False, reg and lt and has_mcp_client(), lambda: mcp_exe() is not None, do_uv_mcp),
-        ("MCP 등록: Claude Code", False, reg and lt and bool(claude_code()), mcp_registered_claude_code, do_register_claude_code),
-        ("MCP 등록: Codex", False, reg and lt and codex_present(), mcp_registered_codex, do_register_codex),
-        ("MCP 등록: Claude 앱", False, reg and lt and claude_desktop_config() is not None, mcp_registered_desktop, do_register_desktop),
-        ("스킬: Claude Code 플러그인", False, reg and bool(claude_code()), plugin_installed, do_plugin),
-        ("스킬: Codex (~/.agents/skills)", False, reg and codex_present(), codex_skills_installed, do_codex_skills),
+        ("MCP 등록: Claude Code", False, reg and lt and use_claude and bool(claude_code()), mcp_registered_claude_code, do_register_claude_code),
+        ("MCP 등록: Codex", False, reg and lt and use_codex, mcp_registered_codex, do_register_codex),
+        ("MCP 등록: Claude 앱", False, reg and lt and use_claude and claude_desktop_config() is not None, mcp_registered_desktop, do_register_desktop),
+        ("스킬: Claude Code 플러그인", True, reg and use_claude and bool(claude_code()),
+         (lambda: False) if a.skills_only else plugin_installed, do_plugin),
+        ("스킬: Codex (~/.agents/skills)", True, reg and use_codex, codex_skills_installed, do_codex_skills),
     ]
+    return [step for step in plan if step[0].startswith("스킬:")] if a.skills_only else plan
 
 
 def main():
-    global DRY
+    global DRY, SKILL_ROOT
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--yes", "-y", action="store_true")
@@ -301,11 +331,22 @@ def main():
     ap.add_argument("--no-ltspice", action="store_true")
     ap.add_argument("--preview", action="store_true")
     ap.add_argument("--deps-only", action="store_true")
+    ap.add_argument("--agent", choices=["auto", "codex", "claude", "all"], default="auto",
+                    help="설치·점검 대상 AI. auto는 현재 세션 신호로 판단")
+    ap.add_argument("--skills-only", action="store_true", help="선택한 AI의 스킬만 설치/갱신 (패키지·MCP 변경 없음)")
+    ap.add_argument("--skill-root", type=Path, help="Codex 스킬 설치 폴더 (기본 ~/.agents/skills)")
     a = ap.parse_args()
+    if a.skills_only and a.deps_only:
+        ap.error("--skills-only와 --deps-only는 함께 쓸 수 없음")
+    try:
+        a.agent = selected_agent(a.agent)
+    except ValueError as error:
+        ap.error(str(error))
+    SKILL_ROOT = a.skill_root.resolve() if a.skill_root else None
     DRY = a.dry_run
 
     todo = []
-    print(f"[점검] {sys.platform}, Python {sys.version.split()[0]} ({sys.executable})")
+    print(f"[점검] {a.agent}, {sys.platform}, Python {sys.version.split()[0]} ({sys.executable})")
     for name, required, applies, done, install in steps(a):
         if not applies:
             continue
@@ -340,8 +381,8 @@ def main():
     for name, required, ok in results:
         print(f"  {'✓' if ok else '✗'} {name}{'' if ok or not required else ' (필수)'}")
     print("\n다음:")
-    print("  - Claude Code·Codex는 새 세션부터 플러그인과 MCP가 보인다 (/exit 후 다시 시작)")
-    if claude_desktop_config() is not None:
+    print(f"  - {a.agent}에서 스킬 변경이 보이지 않으면 새 세션을 시작한다")
+    if a.agent in ("claude", "all") and claude_desktop_config() is not None:
         print("  - Claude 앱은 트레이에서 완전히 종료한 뒤 다시 연다")
     if WIN:
         print("  - 새로 깐 프로그램이 PATH에 안 보이면 터미널을 새로 연다 (스크립트는 설치 위치를 직접 찾는다)")

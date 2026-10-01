@@ -39,4 +39,4 @@ python $E/build.py courses/<과목>/labNN prelab --pdf
 ```
 - `python $E/proof.py build/prelabNN_학번_이름.docx --strict`가 통과할 때까지 고치고, proofreading.md의 "눈으로 볼 것"을 확인한다.
 - 미리보기 PDF를 전 페이지 이미지로 확인하고, 대응표의 모든 문항에 답했는지 본다.
-- 사용자에게는 `build/prelabNN_학번_이름.docx`를 보낸다.
+- 최종 전달은 엔진 SKILL.md의 quality.py render → 전 쪽 확인 → review → deliver 순서를 완료한 사본이다.

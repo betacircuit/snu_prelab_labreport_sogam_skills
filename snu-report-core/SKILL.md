@@ -8,6 +8,11 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 과목 스킬(`snu-logic-lab`, `snu-circuit-lab`, `snu-em-hw`)이 함께 쓰는 규칙과 도구다. 과목 스킬의 SKILL.md가 여기로 안내한다.
 원고는 마크다운으로 쓰고, `build.py`가 서식을 입혀 docx로 만든다.
 
+## 실행 호스트부터 선택
+현재 대화의 실행 환경이 Codex이면 [references/runtime-codex.md](references/runtime-codex.md), Claude이면 [references/runtime-claude.md](references/runtime-claude.md)를 **하나만** 읽는다. 과목 스킬을 직접 실행해도 이 분기는 먼저 적용한다. 사용자 PC에 어떤 앱이 설치됐는지로 현재 호스트를 추측하지 않는다. 공통 내용 규칙은 [references/report-quality.md](references/report-quality.md)다.
+
+스킬 개선·검토 요청은 코드 작업이다. 학생 프로필을 만들거나 과제 자료를 분류하지 않는다.
+
 ## 고칠 곳 지도
 무엇을 바꾸려면 어느 파일을 고치는지. 과목에만 해당하는 것은 과목 폴더, 모든 과목에 해당하는 것은 이 엔진 폴더에 둔다.
 
@@ -27,7 +32,7 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 
 ## 경로 두 개
 - **엔진 `$E`** = 이 폴더의 `scripts/` 절대 경로. 과목 스킬 폴더에서 보면 `../snu-report-core/scripts`.
-  저장소를 clone해서 쓰면 `snu-report-core/scripts`, 플러그인·스킬로 설치했으면 설치된 곳이다 (Claude Code는 스킬을 불러올 때 base directory로 알려 준다).
+  저장소를 clone해서 쓰면 `snu-report-core/scripts`, 플러그인·스킬로 설치했으면 설치된 곳이다 (호스트가 제공한 실제 스킬 경로를 기준으로 찾는다).
   이 문서와 과목 스킬의 `python $E/build.py …`는 `$E`를 그 절대 경로로 바꿔 실행한다.
 - **작업 폴더 `W`** = `profile.yaml`이 있는 폴더. 사용자 정보와 과목별 작업물(`courses/`, `inbox/`, `out/`)이 쌓인다.
   스크립트는 현재 폴더에서 위로 `profile.yaml`을 찾으므로 `W` 안에서 실행한다. 없으면 아래 "맨 처음"대로 만든다.
@@ -66,12 +71,12 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 ## 작업 순서 (prelab / lab report)
 
 ### 0. 자료 정리 (매번 먼저)
-1. 작업 폴더가 git 저장소면 `git pull`로 사용자가 GitHub 웹에서 `inbox/<과목>/`에 올린 파일을 받는다. 채팅 첨부, 연결된 폴더, Google Drive에 있는 자료도 `inbox/<과목>/`에 넣는다.
+1. 사용자가 GitHub의 자료 동기화를 요청한 경우에만 작업 상태와 원격을 확인한 뒤 자료를 받는다. 채팅 첨부, 연결된 폴더, Google Drive에 있는 자료도 `inbox/<과목>/`에 넣는다.
 2. `python $E/ingest.py` — `inbox/<과목>/`의 파일을 `courses/<과목>/labNN/`, Lab00은 `courses/<과목>/materials/`로 분류한다. 중복은 버리고 PDF 텍스트를 뽑는다.
    Lab 번호는 파일명(`[Lab 03]`, `Lab03_`, `실험 3`, `실험3`, `Experiment 3`, `예비보고서 3`) → 파일 내용 앞부분(`Lab 3`, `실험 3`) → 날짜(실험일과 같은 주) 순으로 **알아서 찾는다**.
    그래도 못 찾아 `inbox/<과목>/_unsorted/`에 남으면 사용자에게 묻지 말고, 내가 파일을 열어 주제·날짜를 과목 course.md 일정과 대조해 Lab을 정한 뒤 `--course <과목> --lab NN 파일`로 다시 돌린다. 그 Lab 폴더가 없으면 이때 만들어진다.
 3. 새 Lab이면 `meta.yaml`과 `requirements.md` 초안이 생긴다. 한국어 제목을 채우고, 슬라이드 날짜가 과목 규칙(course.md)과 다르면 규칙을 따르고 사용자에게 한 줄로 알린다.
-4. 작업 폴더가 git 저장소면 분류 결과를 커밋하고 push한다. 마감을 확인한다.
+4. 마감을 확인한다. 과제 원자료·개인정보를 스킬 저장소에 커밋하거나 push하지 않는다. 별도 과제 저장소의 업로드도 사용자가 요청한 범위에서만 한다.
 
 ### A. Prelab — `references/prelab.md`
 문항 확정 → mistakes.md 확인 → 문항별 도구 실행 → 회로도 그리기·그림 검사·회로 검증(figures.md) → `prelab/prelab.md` → `style_check.py`·`proof.py`로 반복 고치기 → `python $E/build.py courses/<과목>/labNN prelab --pdf` → 결과물 오탈자 검증(proofreading.md) → 미리보기 확인 → docx 전달
@@ -134,7 +139,7 @@ ENGINE = next(e for e in (ROOT / "snu-report-core/scripts",
 sys.path.insert(0, str(ENGINE))
 ```
 
-설치: `python $E/bootstrap.py --yes`가 OS에 맞게 다 깐다 (Windows winget, macOS Homebrew, Linux apt). `setup_profile.py --check`가 빠진 것을 알려 준다. 미리보기 PDF용 LibreOffice는 `--preview`.
+설치: `python $E/bootstrap.py --agent <codex|claude> --yes`로 선택한 AI에 필요한 것을 준비한다. `setup_profile.py --check`가 빠진 것을 알려 준다. Codex 번들 도구가 제공되면 그 경로를 우선하며, 로컬 Claude의 LibreOffice 설치 옵션은 `--preview`다.
 
 ## 원고 문법
 | 쓰는 법 | 결과 |
@@ -150,6 +155,18 @@ sys.path.insert(0, str(ENGINE))
 | `- $B = 0$일 때: …` | 이름표 붙은 목록 (경우 나누기, 오차 원인). 이름표는 굵게 하지 않는다 |
 | `1. 회로 연결: …` | 이름표 붙은 번호 목록 (실험 방법) |
 
+## 생성과 전달의 구분
+`build.py`는 원고를 만들고 `out/drafts/<과목>/`에 초안 사본을 둔다. `--final`은 원문 문항 대응과 미해결 표시를 검사하며 전달 완료를 뜻하지 않는다.
+
+```
+python $E/build.py courses/<과목>/labNN report --final
+python $E/quality.py render <생성된 DOCX> --renderer <호스트 render_docx.py 경로>
+# 모든 page-N.png를 실제로 읽어 수정하고, 변경했으면 다시 렌더링한다.
+python $E/quality.py review <DOCX> --pages 1,2,3
+python $E/quality.py deliver <DOCX> --lab-dir courses/<과목>/labNN --kind report
+```
+`--pages`에는 실제 확인한 전체 쪽 번호를 적는다. 렌더러·경로는 선택한 호스트 문서를 따른다. `requirements.yaml`은 `templates/requirements.example.yaml`에서 시작해 원문과 답변으로 채운다. `.md` 대응표는 사람이 읽는 요약, `.yaml`은 최종 누락 검사다.
+
 ## 마무리 확인
 - [ ] 전달 파일이 `.docx`이고 이름이 규칙대로다
 - [ ] 대응표의 모든 문항에 답했다
@@ -163,4 +180,5 @@ sys.path.insert(0, str(ENGINE))
 - [ ] 제목의 가이드북 문항 번호가 `4.2)` 꼴이고, 요구하지 않은 절("실험 준비" 등)이 없다
 - [ ] 굵은 글씨는 맨 위 제목과 절 제목에만 있다
 - [ ] 미리보기 PDF를 전 페이지 확인했다
-- [ ] docx 스키마 검사 통과 (`python /mnt/skills/public/docx/scripts/office/validate.py 파일.docx`, 있을 때)
+- [ ] 호스트에 문서 스키마 검사기가 있으면 실제 경로로 실행했다
+- [ ] quality.py 문항 대응·DOCX 검사·최신 렌더링과 전 쪽 검토를 통과했다

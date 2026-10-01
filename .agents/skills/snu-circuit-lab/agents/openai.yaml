@@ -1,0 +1,4 @@
+interface:
+  display_name: "회로이론 및 실험 보고서"
+  short_description: "회이실 원문 문항과 실험 근거로 예비 및 결과보고서 작성"
+  default_prompt: "$snu-circuit-lab로 첨부 자료의 문항과 근거에 맞는 보고서를 작성해 줘."

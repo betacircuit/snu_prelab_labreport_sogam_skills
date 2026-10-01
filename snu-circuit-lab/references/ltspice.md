@@ -9,7 +9,7 @@
    - `setup_profile.py --check`의 빠진 정보를 묻는다.
    - 가이드북이나 슬라이드가 없으면 달라고 한다.
    - LTspice MCP가 없을 때:
-     - 사용자 PC에서 도는 에이전트(Claude Code, Codex. 셸이 Windows나 macOS)면 묻지 말고 `python $E/bootstrap.py --yes`를 직접 실행한다. LTspice, uv, ltspice-mcp를 설치하고 Claude Code·Codex·Claude 앱에 등록한다.
+     - 사용자 PC에서 도는 에이전트(Claude Code, Codex. 셸이 Windows나 macOS)면 묻지 말고 `python $E/bootstrap.py --agent <codex|claude> --yes`를 선택한 호스트로 실행한다. 설치 요청/현재 세션 권한 범위에서 LTspice를 준비하고 해당 AI에만 MCP를 등록한다.
      - 끝나면 "새 세션에서 MCP가 보인다"고 한 줄 알린다. 이번 세션은 `spice.py run`(LTspice 배치 실행)으로 계속한다.
      - 클라우드 세션이면 아래 "설치 안내"를 붙인다.
    - 답을 기다리지 않고 2–3단계를 먼저 한다.

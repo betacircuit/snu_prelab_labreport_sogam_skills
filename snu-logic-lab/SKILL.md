@@ -9,6 +9,8 @@ description: 서울대 전기정보공학부 「논리설계 및 실험」(논�
 - 맨 처음: `python $E/setup_profile.py --check --course logic` — 설치·작업 폴더는 알아서 준비하고, 빠진 정보(이름, 학번, 조)만 한 번에 묻는다.
 - 작업 폴더(`profile.yaml`이 있는 곳)의 `courses/logic/`에 쌓이고, 자료는 `inbox/logic/`에 넣는다. 과목명·파일명 규칙 기본값은 이 폴더의 `course.yaml`.
 
+공통 엔진의 **실행 호스트 분기**를 먼저 적용한다. Codex는 runtime-codex.md, Claude는 runtime-claude.md만 읽는다.
+
 ## 이 과목만의 것
 | 항목 | 내용 |
 |---|---|

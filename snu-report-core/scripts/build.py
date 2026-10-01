@@ -28,6 +28,7 @@ from __future__ import annotations
 import _console  # noqa: F401  (Windows에서 한글·기호 출력)
 import argparse
 import copy
+import os
 import re
 import shutil
 import subprocess
@@ -269,6 +270,8 @@ def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
         if m and m["cap"]:
             nfig += 1
             for i in ID_RE.findall(m["attr"] or ""):
+                if i in labels:
+                    warnings.append(f"중복 라벨: {i}")
                 labels[i] = ref_fmt.format(prefix=fig_p, n=nfig)
             cap = cap_fmt.format(prefix=fig_p, n=nfig, text=m["cap"])
             out.append(f"{m.group(1)}![{cap}]({m['src']}){_strip_id(m['attr'])}")
@@ -278,6 +281,8 @@ def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
         if m:
             ntbl += 1
             for i in ID_RE.findall(m["attr"] or ""):
+                if i in labels:
+                    warnings.append(f"중복 라벨: {i}")
                 labels[i] = ref_fmt.format(prefix=tbl_p, n=ntbl)
             out.append("Table: " + cap_fmt.format(prefix=tbl_p, n=ntbl, text=m["cap"]))
             continue
@@ -368,12 +373,23 @@ def unescape_markers(docx_path: Path):
     doc.save(docx_path)
 
 
-def to_pdf(docx_path: Path) -> Path:
-    subprocess.run(
-        [find_tool("soffice") or "soffice", "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent), str(docx_path)],
-        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
-    return docx_path.with_suffix(".pdf")
+def to_pdf(docx_path: Path, output_dir: Path | None = None, soffice: str | None = None) -> Path:
+    output_dir = output_dir or docx_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+    tool = soffice or find_tool("soffice")
+    if not tool:
+        raise RuntimeError("LibreOffice가 없음 — 호스트의 렌더러 또는 SNU_SOFFICE 경로를 지정")
+    result = output_dir / (docx_path.stem + ".pdf")
+    result.unlink(missing_ok=True)  # 이전 실행의 PDF를 성공으로 오인하지 않는다.
+    with tempfile.TemporaryDirectory(prefix="snu-lo-") as profile:
+        converted = subprocess.run(
+            [tool, "-env:UserInstallation=" + Path(profile).as_uri(), "--headless",
+             "--convert-to", "pdf", "--outdir", str(output_dir), str(docx_path.resolve())],
+            capture_output=True, text=True, errors="replace", timeout=120,
+        )
+    if converted.returncode or not result.exists() or result.stat().st_size == 0:
+        raise RuntimeError("PDF 변환 실패: " + (converted.stdout + converted.stderr)[-1500:])
+    return result
 
 
 # ───────────────────────── 사진 넣을 곳 (형광펜 칸) ─────────────────────────
@@ -384,11 +400,11 @@ def _placeholder_png(out: Path, title: str, hint: str, fname: str, tall: bool, f
     import matplotlib.pyplot as plt
     from circuit_kit import TEXT_FAMILY
     logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)   # 굵기 없는 글꼴 경고 끄기
-    fig = plt.figure(figsize=(8, 3.6 if tall else 4.5), dpi=150)
+    fig = plt.figure(figsize=(8, 1.25), dpi=150)
     fig.patch.set_facecolor("#" + fill)
-    lines = ["사진 넣을 곳", title] + ([hint] if hint else []) + [f"({fname})"]
-    sizes = [20, 15] + ([12] if hint else []) + [11]
-    ys = [0.5 + 0.13 * (len(lines) - 1) / 2 - 0.13 * i for i in range(len(lines))]
+    lines = ["사진 넣을 곳", title]
+    sizes = [13, 11]
+    ys = [0.64, 0.32]  # 촬영 지시와 내부 파일명은 CLI의 누락 목록에만 둔다.
     for y, t, sz in zip(ys, lines, sizes):
         fig.text(0.5, y, t, ha="center", va="center", fontsize=sz, family=TEXT_FAMILY,
                  fontweight="bold" if sz == 20 else "normal", wrap=True)
@@ -407,13 +423,14 @@ def photo_placeholders(md: str, lab_dir: Path, src_dir: Path, st: dict) -> tuple
         m = IMG_RE.match(line)
         if m:
             src = m["src"].strip()
-            if not any((d / src).exists() for d in (src_dir, lab_dir)) and not Path(src).is_absolute():
+            if not any((d / src).is_file() for d in (src_dir, lab_dir)):
                 hint_m = re.search(r'hint="([^"]*)"', m["attr"] or "")
+                print("  사진 필요:", m["cap"], "—", hint_m.group(1) if hint_m else src, file=sys.stderr)
                 ph = lab_dir / "build" / "placeholders" / (Path(src).stem + ".png")
                 _placeholder_png(ph, m["cap"] or Path(src).stem, hint_m.group(1) if hint_m else "", src,
                                  "code" in Path(src).stem, fill)
                 attr = re.sub(r'\s*hint="[^"]*"', "", m["attr"] or "")
-                line = f"{m.group(1)}![{m['cap']}]({ph.as_posix()}){attr}"
+                line = f"{m.group(1)}![사진 넣을 곳: {m['cap']}]({ph.as_posix()}){attr}"
                 missing.append(src)
         out.append(line)
     return "\n".join(out), missing
@@ -429,8 +446,16 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     if kind == "hw":   # 과제는 'Problem 1)'이 곧 절 번호라 자동 번호(1.)를 붙이지 않는다
         st["numbering"]["heading"] = False
     v = load_vars(lab_dir, kind)
+    if "heading_numbering" in v:
+        st["numbering"]["heading"] = bool(v["heading_numbering"])
 
     raw = src.read_text(encoding="utf-8")
+    from quality import check_requirements
+    requirement_errors = check_requirements(lab_dir, kind, raw)
+    for error in requirement_errors:
+        print("  문항 대응 ⚠", error, file=sys.stderr)
+    if final and requirement_errors:
+        sys.exit("✗ --final: 원문 범위·문항 대응·근거를 먼저 확정한다")
     code_free = re.sub(r"(?s)```.*?```", "", raw)
     marks = MARK_RE.findall(code_free)
     blocking = [m for m in MARK_RE.finditer(code_free) if m.group(1) in BLOCKING]
@@ -463,6 +488,8 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     if code is not None:   # 기초전자기학 HW: 같이 내는 MATLAB 코드 검사 (mcode.py)
         from mcode import check as mcheck
         if not code.exists():
+            if final:
+                sys.exit(f"✗ --final: 제출할 본인 코드 파일이 없다: {code}")
             print(f"⚠ 코드 파일이 없다: {code}", file=sys.stderr)
         else:
             notes, info = mcheck(code)
@@ -502,6 +529,8 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     body, warns = preprocess(raw, st)
     for w in warns:
         print("⚠", w, file=sys.stderr)
+    if final and warns:
+        sys.exit("✗ --final: 그림/표 라벨과 참조 오류를 먼저 해결한다")
     full = title_md(v, st) + "\n" + body
 
     stem = submission_stem(kind, v)
@@ -517,7 +546,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
             [find_tool("pandoc") or "pandoc", str(md_tmp),
              "-f", "markdown+tex_math_dollars+pipe_tables+grid_tables+fenced_divs+raw_attribute+implicit_figures+bracketed_spans",
              "-o", str(out_docx), "--reference-doc", str(ref),
-             "--resource-path", f"{src_dir}:{lab_dir}"],
+             "--resource-path", os.pathsep.join([str(src_dir), str(lab_dir)])],
             check=True,
         )
     unescape_markers(out_docx)
@@ -530,38 +559,41 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     for w in check_text(docx_text(out_docx), is_docx=True):   # 빌드 결과를 다시 읽어 확인 (원고 검사와 겹치지 않는 것만)
         if w.startswith(("[제목 번호]", "[참조]", "[표시]", "[괄호]")):
             print("  결과물 ⚠", w, file=sys.stderr)
-    # 전달용 사본: out/<과목>/파일명.docx (git에 올라가므로 GitHub에서도 받을 수 있다)
+    # 렌더링과 검토가 끝나기 전 사본은 초안 경로에만 둔다.
     ws = find_workspace(lab_dir)
     if ws:
         remember_engine(ws)
-        deliver = ws / "out" / str(v.get("key") or lab_dir.parent.name)
+        deliver = ws / "out" / "drafts" / str(v.get("key") or lab_dir.parent.name)
         deliver.mkdir(parents=True, exist_ok=True)
         shutil.copy2(out_docx, deliver / out_docx.name)
-        print("  전달용:", (deliver / out_docx.name).relative_to(ws))
+        print("  초안 사본:", (deliver / out_docx.name).relative_to(ws))
     if pdf and find_tool("soffice"):
-        # 미리보기 PDF: 제출용 docx는 그대로 두고 사본에서만 쪽 갈림 보정
+        # 쪽 갈림을 실제 전달할 DOCX에 보정하고 그 동일 파일에서 PDF를 만든다.
         prev_dir = out_dir / "preview"
         prev_dir.mkdir(exist_ok=True)
-        prev_docx = prev_dir / out_docx.name
-        shutil.copy2(out_docx, prev_docx)
-        out_pdf = to_pdf(prev_docx)
+        out_pdf = to_pdf(out_docx, output_dir=prev_dir)
         for _ in range(8 if out_pdf.exists() else 0):
             splits = split_captions(out_pdf, st)
-            if not splits or not break_before_frames(prev_docx, splits[:1], st):
+            if not splits or not break_before_frames(out_docx, splits[:1], st):
                 break
-            out_pdf = to_pdf(prev_docx)
+            out_pdf = to_pdf(out_docx, output_dir=prev_dir)
         print("  미리보기:", out_pdf) if out_pdf.exists() else print("⚠ PDF 변환 실패 (LibreOffice) — docx는 그대로 쓸 수 있다. Linux면 Writer가 빠졌을 수 있다: apt install libreoffice-writer", file=sys.stderr)
-        if kind == "hw" and out_pdf.exists() and code is not None and code.exists() and not placeholders and not blocking:   # 제출용 PDF와 zip (사진·[확인 필요]가 다 채워졌을 때만)
-            shutil.copy2(out_pdf, out_dir / f"{stem}.pdf")
-            from mcode import pack
-            try:
-                pack(lab_dir, out_dir / f"{stem}.pdf")
-            except SystemExit as e:
-                print(e, file=sys.stderr)
     if kind == "hw" and code is not None and code.exists() and ws:
-        shutil.copy2(code, ws / "out" / str(v.get("key") or lab_dir.parent.name) / code.name)
+        draft_code = ws / "out" / "drafts" / str(v.get("key") or lab_dir.parent.name) / code.name
+        draft_code.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(code, draft_code)
         if not (out_dir / f"{stem}.zip").exists():
-            print(f"  제출: Word에서 '{stem}.pdf'로 저장 → python $E/mcode.py pack {lab_dir} --pdf <그 PDF> 로 zip")
+            print("  제출 zip은 quality.py render → 전 쪽 review → deliver 이후 생성한다")
+    from quality import check_docx, record_build
+    structure = check_docx(out_docx)
+    if final and structure["errors"]:
+        sys.exit("✗ --final: " + "; ".join(structure["errors"]))
+    record_build(out_docx, lab_dir, kind, style_path)
+    if ws:
+        shutil.copy2(out_docx, deliver / out_docx.name)  # 배치 보정 이후 동일 초안
+    if pdf and not find_tool("soffice"):
+        print("⚠ 미리보기 미생성: 호스트의 렌더러로 quality.py render를 실행한다", file=sys.stderr)
+    print("  완료 전: quality.py render → 모든 쪽 이미지 확인 → review → deliver")
     return out_docx
 
 

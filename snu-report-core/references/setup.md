@@ -9,7 +9,7 @@ python $E/setup_profile.py --check --course <과목>   # logic, circuit, em
 ```
 `ok`가 나오면 바로 작업한다.
 - `need:` 줄은 묻지 않고 처리한다.
-  - 프로그램·패키지: 줄 끝의 `python $E/bootstrap.py --yes --deps-only`를 그대로 실행한다 (파이썬 패키지, pandoc, SPICE를 OS에 맞게 설치). 실패한 단계는 출력을 보고 고친 뒤 다시 돌린다.
+  - 프로그램·패키지: 줄 끝의 `python $E/bootstrap.py --agent <codex|claude> --yes --deps-only`를 그대로 실행한다 (파이썬 패키지, pandoc, SPICE를 OS에 맞게 설치). 실패한 단계는 출력을 보고 고친 뒤 다시 돌린다.
   - 작업 폴더 없음: 현재 폴더에서 `python $E/setup_profile.py --init` (홈 폴더 자체면 `~/snu-reports`를 만들고 `--root ~/snu-reports --init`). 만든 곳을 한 줄로 알린다.
 - `missing:` 줄이 나오면 그 질문들만 모아 **한 메시지로** 묻는다.
 
@@ -41,7 +41,7 @@ python $E/setup_profile.py --course logic --team 7 --teammates "김철수, 이�
 python $E/setup_profile.py --style-sample <본인 보고서 .txt 경로>
 ```
 - 스크립트가 학번 형식을 검사한다. 틀리면 다시 묻는다.
-- 작업 폴더가 git 저장소면 저장한 뒤 커밋하고 push한다. 다음부터는 묻지 않는다.
+- 로컬에 저장한다. 개인정보를 스킬 공개 저장소에 커밋하거나 push하지 않는다. 다음부터는 묻지 않는다.
 - 파일을 쓸 수 없는 환경(ChatGPT 웹 채팅 등)이면 이 대화에서만 기억하고, 끝에 아래 블록을 사용자에게 주면서 "다음엔 이걸 프롬프트에 같이 붙여 줘"라고 한다.
   ```yaml
   name: 홍길동

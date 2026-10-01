@@ -1,0 +1,4 @@
+interface:
+  display_name: "논리설계 및 실험 보고서"
+  short_description: "논설실 문항 풀이와 실험 근거로 예비 및 결과보고서 작성"
+  default_prompt: "$snu-logic-lab로 첨부 자료의 문항과 근거에 맞는 보고서를 작성해 줘."

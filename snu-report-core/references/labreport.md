@@ -6,7 +6,7 @@
   - "Answers for 9.2 must be included"처럼 상위 번호로 지시하면 하위 문항(9.2.1 포함) 전부 답한다.
 - 반드시 넣을 결과 (예: "Experimental results (delay time) should be included")
 - 이번 실험 범위 (예: "We will only go through 8.2")
-- Lab00 공통 필수: 실험 목표, 수행 내용 요약, 토론 및 고찰
+- 논설실 Lab00 필수: 실험 목표, 수행 내용 요약, 토론 및 고찰. 회이실은 과목 course.md의 문항 답변 구조.
 
 ## 2. 입력은 두 가지뿐
 - lab report 자료: 이번 Lab 가이드북(Lab, Discussion 절과 부록 datasheet), 슬라이드의 lab report 지시
@@ -26,6 +26,7 @@ python $E/evidence.py courses/<과목>/labNN
 `courses/<과목>/labNN/report/figs/make_figs.py` 하나에서 회로도와 그래프를 만든다 (figures.md).
 
 ## 5. 원고 `report/report.md`
+회이실은 아래 논설실 구조 대신 교재의 실험 보고서 문항 순서로만 작성한다.
 1. 실험 목표 — 한두 문장. 이번 실험 범위를 밝힌다.
 2. 실험 내용 요약
    - 회로 구성: 회로도 + 게이트 출력 식
@@ -48,7 +49,7 @@ python $E/build.py courses/<과목>/labNN report --pdf
 ```
 - `python $E/proof.py build/labNN_학번_이름.docx --strict`가 통과할 때까지 고친다. proofreading.md의 "눈으로 볼 것"을 확인한다.
 - `build/preview/`의 PDF를 전 페이지 이미지로 확인한다 (표·그림·캡션, 수식, 쪽 넘김).
-- 사용자에게는 `build/labNN_학번_이름.docx`를 보낸다.
+- 최종 전달은 엔진 SKILL.md의 quality.py render → 전 쪽 확인 → review → deliver 순서를 완료한 사본이다.
 
 ## 7. 조원 보고서와 대조 (사용자가 줄 때)
 조원 보고서는 원고의 입력이 아니라 검토 자료다. 본문에 인용하거나 문장을 가져오지 않는다.
