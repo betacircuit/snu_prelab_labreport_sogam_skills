@@ -44,12 +44,16 @@ title_block:
 frames:
   enabled: true
   border: single          # 그림 틀 테두리 (single / none)
-  figure_width: full      # full = 본문 폭 전체 틀, fit = 그림 폭에 맞춤
+  figure_width: fit       # 사진/회로도와 캡션에 맞춘 폭. 세로 사진 옆을 빈 틀로 채우지 않는다.
   caption_bold: false     # 캡션 굵게 여부
-  max_height_fraction: 0.80  # 그림 높이 상한, 캡션과 주변 설명 공간 확보
+  max_height_fraction: 0.55  # 기본 상한. 축/측정값이 읽히는 범위에서 설명 공간 확보
+  max_width_mm: 140       # 원고 width=100%보다도 우선하는 실제 출력 상한
+  max_height_mm: 95
+  portrait_max_height_mm: 80 # 세로가 가로의 1.25배 이상인 이미지
 
 table:
-  font_size: 10
+  font_size: 10.5
+  cell_padding_twips: 100 # 위/아래 5pt. 고정 행 높이를 쓰지 않는다.
   header_bold: false      # 머리행 글자 굵게 여부 (예시 양식: 보통)
   header_fill: none       # 머리행 음영 (none 또는 "F2F2F2" 같은 색)
 
@@ -88,6 +92,7 @@ spacing:
   h3_after: 3
   first_line_indent: 0    # 들여쓰기 (pt)
   leading_space: true     # 본문 문단 첫머리에 공백 한 칸 (스페이스바 한 번)
+  body_hard_breaks: space # 본문은 Enter로 문단을 구분. 강제 줄바꿈은 공백으로 정리
 
 colors:
   # 글자는 전부 검은색

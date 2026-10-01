@@ -2,7 +2,7 @@
 """pandoc이 만든 docx 후처리 (build.py가 호출)
 
 사용자 서식 규칙 (예시: Table.1 / Fig.1 양식)
-1. 표: 표 자체의 맨 아래에 '캡션 행'(전체 열 병합)을 붙인다. 캡션은 굵게, 가운데.
+1. 표: 표 자체의 맨 아래에 '캡션 행'(전체 열 병합)을 붙인다. 캡션은 보통 굵기, 가운데.
 2. 그림: 1열 2행 표(테두리 있음) — 윗칸 그림, 아랫칸 캡션. 틀 전체 가운데.
 3. 표 칸: 모든 칸 구분선, 글자 가운데 정렬, 줄 간격 1.0, 머리행 글자는 임의 줄바꿈 없이 열 너비를 맞춤
    (불가피하면 공백·괄호 앞에서 끊음).
@@ -116,8 +116,8 @@ def para_center_tight(p, keep_next=False, before=0, after=0, line=240):
     for tag in ("w:keepNext", "w:spacing", "w:ind", "w:jc"):
         for old in ppr.findall(qn(tag)):
             ppr.remove(old)
-    if keep_next:
-        ppr.append(_el("w:keepNext"))
+    # 생략하면 캡션 스타일의 keepNext=true를 상속해 다음 문항까지 묶일 수 있다.
+    ppr.append(_el("w:keepNext", **{"w:val": "1" if keep_next else "0"}))
     ppr.append(_el("w:spacing", **{"w:before": before, "w:after": after, "w:line": line, "w:lineRule": "auto"}))
     ppr.append(_el("w:ind", **{"w:left": 0, "w:right": 0, "w:firstLine": 0}))
     ppr.append(_el("w:jc", **{"w:val": "center"}))
@@ -152,7 +152,7 @@ def _bold_runs(p):
 
 
 # ───────────────────────── table autofit ─────────────────────────
-def autofit_table(tbl, max_tw: float, size: float, pad_pt=10.0) -> list[int]:
+def autofit_table(tbl, max_tw: float, size: float, pad_pt=14.0) -> list[int]:
     rows = tbl.findall(qn("w:tr"))
     grid = [tr.findall(qn("w:tc")) for tr in rows]
     ncol = max(len(r) for r in grid)
@@ -243,17 +243,28 @@ def set_widths(tbl, tw):
             tcpr.insert(0, _el("w:tcW", **{"w:w": tw[min(i, len(tw) - 1)], "w:type": "dxa"}))
 
 
-def tidy_cells(tbl, size, line=240):
-    """표 칸: 가운데 정렬, 여백 0, 줄 간격 1.0, 글자 크기 고정, 세로 가운데."""
-    for tr in tbl.findall(qn("w:tr")):
+def tidy_cells(tbl, size, line=240, padding=100):
+    """셀 여백을 확보한다. 짧은 표만 묶고 긴 표는 머리행을 반복한다."""
+    rows = tbl.findall(qn("w:tr"))
+    for index, tr in enumerate(rows):
+        trpr = tr.find(qn("w:trPr"))
+        if trpr is None:
+            trpr = _el("w:trPr")
+            tr.insert(0, trpr)
+        _set_child(trpr, "w:cantSplit")
+        if index == 0:
+            _set_child(trpr, "w:tblHeader")
         for tc in tr.findall(qn("w:tc")):
             tcpr = tc.find(qn("w:tcPr"))
             if tcpr is None:
                 tcpr = _el("w:tcPr")
                 tc.insert(0, tcpr)
             _set_child(tcpr, "w:vAlign", **{"w:val": "center"})
+            margins = _set_child(tcpr, "w:tcMar")
+            for side in ("top", "bottom", "left", "right"):
+                margins.append(_el(f"w:{side}", **{"w:w": padding, "w:type": "dxa"}))
             for p in tc.findall(qn("w:p")):
-                para_center_tight(p, keep_next=True, line=line)
+                para_center_tight(p, keep_next=(len(rows) <= 8 and index < len(rows)-1), line=line)
                 for r in p.iter(qn("w:r")):
                     _run_size(r, size)
 
@@ -284,6 +295,9 @@ def add_caption_row(tbl, cap_p, total_tw: int, bold=False):
             row.insert(0, rp)
         if rp.find(qn("w:cantSplit")) is None:
             rp.append(_el("w:cantSplit"))
+    # 마지막 데이터 행과 캡션만 반드시 붙인다. 긴 표 전체를 한 쪽에 묶지 않는다.
+    for p in tbl.findall(qn("w:tr"))[-2].iter(qn("w:p")):
+        _set_child(_ppr(p), "w:keepNext")
 
 
 def figure_frame(img_p, cap_p, width_tw: int, border="single", bold=False):
@@ -331,10 +345,13 @@ def _image_width_tw(p) -> int:
 
 
 def _spacer_after(el):
-    """표·그림 틀 뒤 본문과의 간격용 빈 문단."""
+    """표끼리 합쳐지지 않도록 하는 최소 문단. 본문 앞에는 빈 줄을 넣지 않는다."""
+    following = el.getnext()
+    if following is not None and following.tag == qn("w:p"):
+        return
     p = _el("w:p")
     ppr = _el("w:pPr")
-    ppr.append(_el("w:spacing", **{"w:before": 0, "w:after": 0, "w:line": 160, "w:lineRule": "exact"}))
+    ppr.append(_el("w:spacing", **{"w:before": 0, "w:after": 0, "w:line": 20, "w:lineRule": "exact"}))
     p.append(ppr)
     el.addnext(p)
 
@@ -351,7 +368,7 @@ def frame_all(doc, st: dict, usable_tw: float):
         el = children[i]
         if el.tag == qn("w:p") and p_style(el) == "TableCaption" and i + 1 < len(children) and children[i + 1].tag == qn("w:tbl"):
             tbl = children[i + 1]
-            tidy_cells(tbl, tsize)
+            tidy_cells(tbl, tsize, padding=st.get("table", {}).get("cell_padding_twips", 100))
             tw = autofit_table(tbl, usable_tw, tsize)
             cap_need = text_pt(p_text(el), st["size"]["caption"], bold=cap_bold) * TW_PER_PT + 400
             if cap_need > sum(tw):  # 캡션이 표보다 넓으면 열을 비례 확대
@@ -364,17 +381,18 @@ def frame_all(doc, st: dict, usable_tw: float):
             i += 2
             continue
         if el.tag == qn("w:tbl"):
-            tidy_cells(el, tsize)
+            tidy_cells(el, tsize, padding=st.get("table", {}).get("cell_padding_twips", 100))
             autofit_table(el, usable_tw, tsize)
             n_tbl += 1
             i += 1
             continue
         if el.tag == qn("w:p") and p_style(el) in ("CaptionedFigure", "Figure") and el.find(".//" + qn("w:drawing")) is not None:
             cap = children[i + 1] if i + 1 < len(children) and p_style(children[i + 1]) == "ImageCaption" else None
-            if st.get("frames", {}).get("figure_width", "full") == "full":
+            if st.get("frames", {}).get("figure_width", "fit") == "full":
                 width = int(usable_tw)
             else:
-                width = int(min(_image_width_tw(el) + 400, usable_tw))
+                caption_width = text_pt(p_text(cap), st["size"]["caption"]) * TW_PER_PT + 200 if cap is not None else 0
+                width = int(min(max(_image_width_tw(el) + 200, caption_width), usable_tw))
             prev = el.getprevious()
             frame = figure_frame(el, cap, width, border, bold=cap_bold)
             if prev is not None:
@@ -611,10 +629,14 @@ def postprocess(docx_path, st: dict):
     res = {}
     # 사진의 비율을 유지하고 그림+캡션이 한 쪽을 넘지 않게 한다.
     section = doc.sections[0]
-    max_w = int(section.page_width - section.left_margin - section.right_margin) - 120000
-    max_h = int((section.page_height - section.top_margin - section.bottom_margin) *
-                float(st.get("frames", {}).get("max_height_fraction", 0.80)))
-    res["images_resized"] = fit_images(doc, max_w, max_h)
+    frames = st.get("frames", {})
+    max_w = min(int(section.page_width - section.left_margin - section.right_margin) - 120000,
+                int(float(frames.get("max_width_mm", 140))*36000))
+    max_h = min(int((section.page_height - section.top_margin - section.bottom_margin) *
+                   float(frames.get("max_height_fraction", 0.55))),
+                int(float(frames.get("max_height_mm", 95))*36000))
+    res["images_resized"] = fit_images(doc, max_w, max_h,
+                                       int(float(frames.get("portrait_max_height_mm", 80))*36000))
     if st.get("frames", {}).get("enabled", True):
         res["frames"] = frame_all(doc, st, usable_tw)
     if not st.get("spacing", {}).get("auto_space_latin", False):
@@ -627,14 +649,60 @@ def postprocess(docx_path, st: dict):
                                  float(sz.get("math_display", sz.get("body", 11))))
     res["bullets"] = dash_bullets(doc)
     res["table_alt_removed"] = modern_word(doc)
+    res["paragraphs_cleaned"] = clean_paragraphs(doc, st)
+    res["flow_groups"] = keep_related_content(doc)
+    res["black_text"] = force_black_text(doc)
     from ooxml_order import normalize_document
     res["schema_order_fixed"] = normalize_document(doc)
     doc.save(docx_path)
     return res
 
 
-def fit_images(doc, max_width: int, max_height: int) -> int:
-    """wp と DrawingML の両寸法を同じ比率で縮める。拡大はしない。"""
+def keep_related_content(doc) -> int:
+    """도입 설명과 직후의 식/그림을 붙인다. 문항 전체를 한 덩어리로 묶지 않는다."""
+    children = list(doc.element.body)
+    count = 0
+    for index, element in enumerate(children[:-1]):
+        following = children[index + 1]
+        if p_style(following) == "MissingFigure":
+            if element.tag == qn("w:tbl"):
+                rows = element.findall(qn("w:tr"))
+                for caption in rows[-1].iter(qn("w:p")) if rows else ():
+                    _set_child(_ppr(caption), "w:keepNext")
+                    count += 1
+            elif element.tag == qn("w:p") and p_text(element).strip():
+                _set_child(_ppr(element), "w:keepNext")
+                count += 1
+            continue
+        if element.tag != qn("w:p") or not p_text(element).strip():
+            continue
+        if p_style(element) in ("DocTitle", "DocSubtitle", "DocMeta"):
+            continue
+        display_math = following.find(qn("m:oMathPara")) is not None
+        calculation_intro = (
+            index + 2 < len(children)
+            and following.tag == qn("w:p")
+            and children[index+2].find(qn("m:oMathPara")) is not None
+            and element.find(qn("m:oMathPara")) is None
+            and len(p_text(element)) + len(p_text(following)) <= 300
+        )
+        figure_intro = (
+            index + 2 < len(children)
+            and following.tag == qn("w:p")
+            and children[index+2].tag == qn("w:tbl")
+            and children[index+2].find(".//" + qn("w:drawing")) is not None
+            and len(p_text(element)) + len(p_text(following)) <= 300
+        )
+        # 짧은 도입만 그림과 묶는다. 긴 본문까지 묶으면 큰 빈칸이 생긴다.
+        figure = following.tag == qn("w:tbl") and following.find(".//" + qn("w:drawing")) is not None
+        if display_math or calculation_intro or figure_intro or (figure and len(p_text(element)) <= 240):
+            _set_child(_ppr(element), "w:keepNext")
+            count += 1
+    return count
+
+
+def fit_images(doc, max_width: int, max_height: int, portrait_height: int | None = None) -> int:
+    """wp와 DrawingML의 치수를 같은 비율로 줄인다. 확대하지 않는다."""
     count = 0
     for inline in doc.element.body.iter(qn("wp:inline")):
         extent = inline.find(qn("wp:extent"))
@@ -643,12 +711,73 @@ def fit_images(doc, max_width: int, max_height: int) -> int:
         width, height = int(extent.get("cx")), int(extent.get("cy"))
         if width <= 0 or height <= 0:
             continue
-        scale = min(1.0, max_width / width, max_height / height)
+        height_limit = min(max_height, portrait_height) if portrait_height and height / width >= 1.25 else max_height
+        scale = min(1.0, max_width / width, height_limit / height)
         if scale < 1:
             for element in [extent, *inline.findall(".//" + qn("a:xfrm") + "/" + qn("a:ext"))]:
                 element.set("cx", str(int(width * scale)))
                 element.set("cy", str(int(height * scale)))
             count += 1
+    return count
+
+
+def force_black_text(doc) -> int:
+    """링크/수식/직접 서식/테마/머리말/꼬리말까지 글자색을 명시적으로 검정으로 고정."""
+    roots = [doc.element, doc.styles.element]
+    for section in doc.sections:
+        roots.extend(h._element for h in (section.header, section.first_page_header,
+                     section.even_page_header, section.footer, section.first_page_footer, section.even_page_footer))
+    count = 0
+    for root in roots:
+        for run in list(root.iter(qn("w:r"))) + list(root.iter(qn("m:r"))):
+            rpr = run.find(qn("w:rPr"))
+            if rpr is None:
+                rpr = _el("w:rPr")
+                mrpr = run.find(qn("m:rPr"))
+                if mrpr is not None:
+                    mrpr.addnext(rpr)
+                else:
+                    run.insert(0, rpr)
+            _set_child(rpr, "w:color", **{"w:val": "000000"})
+            count += 1
+        for rpr in root.iter(qn("w:rPr")):
+            _set_child(rpr, "w:color", **{"w:val": "000000"})
+    return count
+
+
+def clean_paragraphs(doc, st: dict) -> int:
+    """빈 Enter와 본문의 강제 줄바꿈을 정리하고 문단 간격을 서식으로 지정."""
+    body = doc.element.body
+    count = 0
+    text_styles = {None, "Normal", "BodyText", "FirstParagraph", "Compact"}
+    for p in list(body.findall(qn("w:p"))):
+        structural = any(p.find('.//' + qn(tag)) is not None for tag in
+                         ("w:drawing", "m:oMath", "m:oMathPara", "w:sectPr", "w:pageBreakBefore", "w:bookmarkStart"))
+        breaks = list(p.iter(qn("w:br")))
+        page_break = any(b.get(qn("w:type")) in ("page", "column") for b in breaks)
+        if not p_text(p).strip() and not structural and not page_break:
+            # Word의 연속 표가 합쳐지는 것을 막는 한 개의 최소 문단은 유지한다.
+            previous, following = p.getprevious(), p.getnext()
+            if previous is not None and following is not None and previous.tag == following.tag == qn("w:tbl"):
+                _set_child(_ppr(p), "w:spacing", **{"w:before": 0, "w:after": 0, "w:line": 20, "w:lineRule": "exact"})
+            else:
+                body.remove(p)
+                count += 1
+            continue
+        if p_style(p) not in text_styles or structural:
+            continue
+        spacing = st.get("spacing", {})
+        _set_child(_ppr(p), "w:spacing", **{"w:before": 0,
+            "w:after": int(float(spacing.get("para_after", 6))*20),
+            "w:line": int(float(spacing.get("line", 1.35))*240), "w:lineRule": "auto"})
+        _set_child(_ppr(p), "w:widowControl")
+        if spacing.get("body_hard_breaks", "space") == "space":
+            for br in breaks:
+                if br.get(qn("w:type"), "textWrapping") == "textWrapping":
+                    space = _el("w:t", **{"xml:space": "preserve"})
+                    space.text = " "
+                    br.getparent().replace(br, space)
+                    count += 1
     return count
 
 

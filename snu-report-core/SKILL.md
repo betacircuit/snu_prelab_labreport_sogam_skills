@@ -12,6 +12,7 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 현재 대화의 실행 환경이 Codex이면 [references/runtime-codex.md](references/runtime-codex.md), Claude이면 [references/runtime-claude.md](references/runtime-claude.md)를 **하나만** 읽는다. 과목 스킬을 직접 실행해도 이 분기는 먼저 적용한다. 사용자 PC에 어떤 앱이 설치됐는지로 현재 호스트를 추측하지 않는다. 공통 내용 규칙은 [references/report-quality.md](references/report-quality.md)다.
 
 스킬 개선·검토 요청은 코드 작업이다. 학생 프로필을 만들거나 과제 자료를 분류하지 않는다.
+보고서의 품질·서식 개선 요청에 첨부본이 있으면 먼저 실제 쪽을 읽고 문제를 특정한다. 첨부본을 고친 비교용 DOCX를 로컬에 만들고 전체 쪽을 확인하여 원고 지침과 생성 코드를 함께 수정한다. 검사 항목 추가나 테스트 통과만으로 서식 개선을 완료했다고 말하지 않는다. 공개 저장소에는 개인 보고서를 넣지 않는다.
 
 ## 고칠 곳 지도
 무엇을 바꾸려면 어느 파일을 고치는지. 과목에만 해당하는 것은 과목 폴더, 모든 과목에 해당하는 것은 이 엔진 폴더에 둔다.

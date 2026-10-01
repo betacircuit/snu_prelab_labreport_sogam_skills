@@ -274,7 +274,12 @@ def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
                     warnings.append(f"중복 라벨: {i}")
                 labels[i] = ref_fmt.format(prefix=fig_p, n=nfig)
             cap = cap_fmt.format(prefix=fig_p, n=nfig, text=m["cap"])
-            out.append(f"{m.group(1)}![{cap}]({m['src']}){_strip_id(m['attr'])}")
+            if m["src"].startswith("snu-missing:"):
+                # 초안의 누락 그림도 참조 번호는 유지하되 가짜 그림/빈 틀을 만들지 않는다.
+                out.append('::: {custom-style="Missing Figure"}\n' +
+                           f'[⟦미제공: {cap}⟧]{{custom-style="Marker"}}\n:::')
+            else:
+                out.append(f"{m.group(1)}![{cap}]({m['src']}){_strip_id(m['attr'])}")
             continue
 
         m = TBLCAP_RE.match(line)
@@ -392,32 +397,9 @@ def to_pdf(docx_path: Path, output_dir: Path | None = None, soffice: str | None 
     return result
 
 
-# ───────────────────────── 사진 넣을 곳 (형광펜 칸) ─────────────────────────
-def _placeholder_png(out: Path, title: str, hint: str, fname: str, tall: bool, fill: str):
-    import matplotlib
-    matplotlib.use("Agg")
-    import logging
-    import matplotlib.pyplot as plt
-    from circuit_kit import TEXT_FAMILY
-    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)   # 굵기 없는 글꼴 경고 끄기
-    fig = plt.figure(figsize=(8, 1.25), dpi=150)
-    fig.patch.set_facecolor("#" + fill)
-    lines = ["사진 넣을 곳", title]
-    sizes = [13, 11]
-    ys = [0.64, 0.32]  # 촬영 지시와 내부 파일명은 CLI의 누락 목록에만 둔다.
-    for y, t, sz in zip(ys, lines, sizes):
-        fig.text(0.5, y, t, ha="center", va="center", fontsize=sz, family=TEXT_FAMILY,
-                 fontweight="bold" if sz == 20 else "normal", wrap=True)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, facecolor=fig.get_facecolor())
-    plt.close(fig)
-
-
+# ───────────────────────── 초안의 누락 그림 표시 ─────────────────────────
 def photo_placeholders(md: str, lab_dir: Path, src_dir: Path, st: dict) -> tuple[str, list[str]]:
-    """원고의 그림 중 파일이 아직 없는 것을 노란 '사진 넣을 곳' 칸으로 바꾼다.
-    본인이 찍을 사진(MATLAB 화면, 스코프 사진, LTspice 캡처)을 기다리는 동안 보고서를 먼저 완성하기 위한 것.
-    칸 안에 캡션과 hint="…"(무엇을 찍을지)를 적는다. Word에서 그 칸을 오른쪽 클릭 → 그림 바꾸기로 바꿔도 된다."""
-    fill = str(st.get("colors", {}).get("marker_fill", "FFF2A8"))
+    """없는 그림은 참조 번호가 유지되는 한 줄 표시로, 촬영 지시는 CLI 목록으로 보낸다."""
     out, missing = [], []
     for line in md.splitlines():
         m = IMG_RE.match(line)
@@ -426,11 +408,8 @@ def photo_placeholders(md: str, lab_dir: Path, src_dir: Path, st: dict) -> tuple
             if not any((d / src).is_file() for d in (src_dir, lab_dir)):
                 hint_m = re.search(r'hint="([^"]*)"', m["attr"] or "")
                 print("  사진 필요:", m["cap"], "—", hint_m.group(1) if hint_m else src, file=sys.stderr)
-                ph = lab_dir / "build" / "placeholders" / (Path(src).stem + ".png")
-                _placeholder_png(ph, m["cap"] or Path(src).stem, hint_m.group(1) if hint_m else "", src,
-                                 "code" in Path(src).stem, fill)
                 attr = re.sub(r'\s*hint="[^"]*"', "", m["attr"] or "")
-                line = f"{m.group(1)}![사진 넣을 곳: {m['cap']}]({ph.as_posix()}){attr}"
+                line = f"{m.group(1)}![{m['cap']}](snu-missing:{Path(src).stem}){attr}"
                 missing.append(src)
         out.append(line)
     return "\n".join(out), missing
@@ -514,7 +493,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
             msg = "본인이 찍은 MATLAB 사진이 아직 없다 — 대신 그리지 말고 본인에게 받는다:\n  - " + "\n  - ".join(missing_photos)
             if final:
                 sys.exit("✗ --final: " + msg)
-            print("⚠ " + msg + "\n  (그 자리에는 노란 '사진 넣을 곳' 칸을 넣는다)", file=sys.stderr)
+            print("⚠ " + msg + "\n  (초안에는 한 줄 누락 표시를 넣는다)", file=sys.stderr)
         from mcode import include_code   # code_text: true일 때만 쓰인다
         raw, missing = include_code(raw, code)
         for k in missing:
@@ -522,7 +501,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
 
     raw, placeholders = photo_placeholders(raw, lab_dir, src_dir, st)
     if placeholders:
-        print(f"⚠ 사진 넣을 곳 {len(placeholders)}개 (노란 칸): " + ", ".join(placeholders), file=sys.stderr)
+        print(f"⚠ 누락 그림 {len(placeholders)}개 (초안 한 줄 표시): " + ", ".join(placeholders), file=sys.stderr)
         if final:
             sys.exit("✗ --final: 사진이 아직 없는 자리가 있다 — 사진을 받아 figs/에 넣고 다시 빌드")
 

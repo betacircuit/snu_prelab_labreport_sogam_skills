@@ -179,20 +179,16 @@ def _style_table(doc, st):
 
 
 def _add_field(paragraph, instr: str):
-    run = paragraph.add_run()
-    for kind, text in (("begin", None), ("instr", instr), ("separate", None), ("text", "1"), ("end", None)):
-        if kind == "instr":
-            el = OxmlElement("w:instrText")
-            el.set(qn("xml:space"), "preserve")
-            el.text = f" {text} "
-        elif kind == "text":
-            el = OxmlElement("w:t")
-            el.text = text
-        else:
-            el = OxmlElement("w:fldChar")
-            el.set(qn("w:fldCharType"), kind)
-        run._r.append(el)
-    return run
+    from docx.text.run import Run
+    field = OxmlElement("w:fldSimple")
+    field.set(qn("w:instr"), f" {instr} ")
+    element = OxmlElement("w:r")
+    text = OxmlElement("w:t")
+    text.text = "1"
+    element.append(text)
+    field.append(element)
+    paragraph._p.append(field)
+    return Run(element, paragraph)
 
 
 def _fill(tmpl: str, vars: dict) -> str:
@@ -291,7 +287,7 @@ def build_reference(style_path: Path, out: Path, vars: dict | None = None) -> Pa
         s = _style(doc, name)
         _style_font(s, F["heading_en"], F["heading_ko"], S["caption"],
                     bold=bool(st.get("frames", {}).get("caption_bold", False)), color=C["muted"])
-        _para_spacing(s, before=3, after=10, line=1.2, align=WD_ALIGN_PARAGRAPH.CENTER)
+        _para_spacing(s, before=3, after=10, line=1.2, align=WD_ALIGN_PARAGRAPH.CENTER, keep_next=False)
     _para_spacing(_style(doc, "Table Caption"), before=8, after=4, keep_next=True)
     for name in ("Figure", "Captioned Figure"):
         _para_spacing(_style(doc, name), before=6, after=0, align=WD_ALIGN_PARAGRAPH.CENTER, keep_next=True)
@@ -347,7 +343,10 @@ def build_reference(style_path: Path, out: Path, vars: dict | None = None) -> Pa
     shd.set(qn("w:color"), "auto")
     shd.set(qn("w:fill"), C.get("marker_fill", "FFF2A8"))
     mrpr.append(shd)
-    mk.font.bold = True
+    mk.font.bold = False
+    missing = _get_or_add_style(doc, "Missing Figure")
+    _style_font(missing, F["body_en"], F["body_ko"], S["caption"], bold=False, color=C["text"])
+    _para_spacing(missing, before=4, after=6, line=1.2, align=WD_ALIGN_PARAGRAPH.CENTER)
 
     _style_table(doc, st)
 
