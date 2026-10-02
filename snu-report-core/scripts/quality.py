@@ -29,6 +29,14 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def engine_fingerprint() -> dict:
+    """A render/review from an older generator must not certify a current delivery."""
+    root = Path(__file__).resolve().parent.parent
+    paths = sorted((root / 'scripts').glob('*.py')) + sorted((root / 'scripts').glob('*.ps1'))
+    paths += sorted((root / 'templates').glob('*.yaml'))
+    return {p.relative_to(root).as_posix(): digest(p) for p in paths}
+
+
 def qa_dir(docx: Path) -> Path:
     return docx.parent / "qa" / docx.stem
 
@@ -75,11 +83,14 @@ def record_build(docx: Path, lab_dir: Path, kind: str, style_path: Path):
             missing_images.append(image)
     inputs = {str(p.resolve()): digest(p) if p.is_file() else None for p in paths}
     save_json(qa_dir(docx) / "build.json", {"kind": kind, "lab_dir": str(lab_dir.resolve()),
-              "docx_sha256": digest(docx), "inputs": inputs, "missing_images": missing_images})
+              "docx_sha256": digest(docx), "inputs": inputs, "missing_images": missing_images,
+              "engine_sha256": engine_fingerprint()})
 
 
 def verify_build(docx: Path, lab_dir: Path, kind: str):
     record = json.loads((qa_dir(docx) / "build.json").read_text(encoding="utf-8"))
+    if record.get('engine_sha256') != engine_fingerprint():
+        raise ValueError('생성 엔진이 변경됐거나 버전 기록이 없음 — 최신 엔진으로 다시 빌드·렌더링·검토')
     if record.get("missing_images"):
         raise ValueError("누락 사진이 있는 초안 — 자료를 넣고 다시 빌드")
     if record.get("kind") != kind or record.get("lab_dir") != str(lab_dir.resolve()) or record.get("docx_sha256") != digest(docx):
@@ -199,7 +210,11 @@ def check_requirements(lab_dir: Path, kind: str, manuscript: str) -> list[str]:
     return errors
 
 
-def render(docx: Path, renderer: Path | None = None, soffice: str | None = None) -> dict:
+def render(docx: Path, renderer: Path | None = None, soffice: str | None = None, word: bool = False) -> dict:
+    if word and (renderer or soffice):
+        raise ValueError('--word는 --renderer/--soffice와 함께 사용할 수 없음')
+    if word and os.name != 'nt':
+        raise ValueError('--word 렌더링은 Microsoft Word가 설치된 Windows에서만 가능')
     folder = qa_dir(docx)
     folder.mkdir(parents=True, exist_ok=True)
     # 이전 렌더링은 새 파일로 오인하지 않도록 무효화하고 이 폴더의 쪽 PNG만 정리.
@@ -213,7 +228,21 @@ def render(docx: Path, renderer: Path | None = None, soffice: str | None = None)
     if soffice:
         env["SNU_SOFFICE"] = soffice
         env["PATH"] = str(Path(soffice).parent) + os.pathsep + env.get("PATH", "")
-    if renderer:
+    if word:
+        from ws import find_tool
+        import pymupdf
+        powershell = find_tool('pwsh') or find_tool('powershell')
+        if not powershell:
+            raise ValueError('Word 렌더링용 PowerShell을 찾지 못함')
+        pdf = folder / (docx.stem + '.pdf')
+        subprocess.run([powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                        '-File', str(Path(__file__).with_name('render_word.ps1')),
+                        '-InputDocx', str(docx.resolve()), '-OutputPdf', str(pdf.resolve())],
+                       check=True, timeout=180)
+        with pymupdf.open(pdf) as document:
+            for i, page in enumerate(document):
+                page.get_pixmap(dpi=150).save(folder / f'page-{i+1}.png')
+    elif renderer:
         subprocess.run([sys.executable, str(renderer.resolve()), str(docx.resolve()),
                         "--output_dir", str(folder), "--emit_pdf"], check=True, env=env, timeout=180)
     else:
@@ -233,7 +262,8 @@ def render(docx: Path, renderer: Path | None = None, soffice: str | None = None)
     for page in pages:
         with Image.open(page) as im:
             im.verify()
-    record = {"docx_sha256": before, "pages": {str(i+1): digest(p) for i,p in enumerate(pages)}}
+    record = {"docx_sha256": before, "pages": {str(i+1): digest(p) for i,p in enumerate(pages)},
+              "renderer": 'Microsoft Word' if word else str(renderer or 'LibreOffice')}
     pdf = folder / (docx.stem + ".pdf")
     record["pdf_sha256"] = digest(pdf) if pdf.is_file() else None
     save_json(folder / "render.json", record)
@@ -313,6 +343,7 @@ def main():
     parser.add_argument("docx", type=Path)
     parser.add_argument("--renderer", type=Path)
     parser.add_argument("--soffice")
+    parser.add_argument('--word', action='store_true', help='Windows Microsoft Word로 읽기 전용 PDF/PNG 렌더링')
     parser.add_argument("--pages", help="실제로 이미지 확인한 모든 쪽 번호: 1,2,3")
     parser.add_argument("--lab-dir", type=Path)
     parser.add_argument("--kind", choices=["prelab", "report", "hw"])
@@ -323,7 +354,7 @@ def main():
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return bool(result["errors"])
         if args.action == "render":
-            render(args.docx, args.renderer, args.soffice)
+            render(args.docx, args.renderer, args.soffice, args.word)
             print("렌더링 완료, 전 쪽 이미지 검토 필요:", qa_dir(args.docx))
         elif args.action == "review":
             if not args.pages:

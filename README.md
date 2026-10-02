@@ -50,6 +50,14 @@ https://github.com/betacircuit/snu_prelab_labreport_sogam_skills 저장소의 �
 
 공통 서식·내용 규칙은 하나이며 실행 경로만 나눈다. Codex는 `runtime-codex.md`, Claude는 `runtime-claude.md`를 읽는다. 머신에 두 앱이 있어도 현재 AI의 스킬·MCP만 설치한다. 두 앱 모두를 요청하면 `--agent all`을 쓴다. 자동 판단이 불가능하면 대상 플래그를 지정한다.
 
+| 구분 | Codex | Claude |
+|---|---|---|
+| 저장소 진입점 | `AGENTS.md`, `.agents/skills/` | `CLAUDE.md`, `.claude/skills/` |
+| 실행 지침 | `runtime-codex.md` | `runtime-claude.md` |
+| 설치 대상 | `--agent codex`, `~/.agents/skills` | `--agent claude`, Claude 플러그인 |
+
+두 호스트는 루트의 `snu-*` 공통 생성 코드를 공유한다. 서식 수정은 공유하되 상대 AI의 설정·설치는 변경하지 않는다. 경로 분기 테스트와 설치 대상 테스트를 함께 실행한다.
+
 스킬만 갱신할 때:
 ```
 python ~/.snu-skills/snu-report-core/scripts/bootstrap.py --agent codex --skills-only --yes
@@ -67,7 +75,7 @@ python $E/quality.py render <DOCX> --renderer <호스트의 render_docx.py>
 python $E/quality.py review <DOCX> --pages 1,2,3
 python $E/quality.py deliver <DOCX> --lab-dir courses/circuit/lab01 --kind report
 ```
-`$E`는 실제 엔진 경로다. 로컬 Claude 환경은 `quality.py render <DOCX> --soffice <명시한 실행파일>`도 사용할 수 있다. 렌더링·검토 뒤 원고나 근거가 바뀌면 재빌드한다. 자동 검사만으로 답의 정확성이나 페이지 가독성을 보증하지 않는다.
+`$E`는 실제 엔진 경로다. Word가 설치된 Windows에서는 `quality.py render <DOCX> --word`로 실제 Word 렌더링을 기록할 수 있다. 로컬 Claude 환경은 `--soffice <명시한 실행파일>`도 사용할 수 있다. 생성 엔진·원고·근거가 바뀌면 재빌드·렌더링·검토해야 최종본으로 전달할 수 있다. 기존 출력 수정은 비교본뿐 아니라 `out/<과목>/`의 실제 전달 파일까지 갱신한다. 자동 검사만으로 답의 정확성이나 페이지 가독성을 보증하지 않는다.
 
 공개 테스트에는 가상 자료만 넣는다. 테스트: `python -m unittest discover -s tests -v`.
 

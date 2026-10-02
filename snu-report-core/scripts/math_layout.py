@@ -178,6 +178,8 @@ def layout_issues(doc):
             align = ppr.find(qn('w:jc')) if ppr is not None else None
             if align is None or align.get(qn('w:val')) != 'center':
                 issues.append('독립 수식이 가운데 정렬되지 않음')
+            if spacing is None or any(int(spacing.get(qn('w:' + side), 0)) < 80 for side in ('before', 'after')):
+                issues.append('독립 수식 앞뒤 여백이 4 pt 미만 — 수식·본문 밀착 위험')
             for mp in paragraph.findall(qn('m:oMathPara')):
                 jc = mp.find('./' + qn('m:oMathParaPr') + '/' + qn('m:jc'))
                 if jc is None or jc.get(qn('m:val')) != 'center':

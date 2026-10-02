@@ -31,6 +31,24 @@ def equation(p, text='x=1', fraction=False):
 
 
 class MathAndGapTests(unittest.TestCase):
+    def test_inverse_tangent_minus_and_display_gaps_survive(self):
+        doc = Document()
+        p = doc.add_paragraph()
+        equation(p)
+        math = p._p.find('.//' + qn('m:oMath'))
+        math.clear()
+        math.append(parse_xml('<m:sSup '+nsdecls('m')+'><m:e><m:r><m:t>tan</m:t></m:r></m:e>'
+            '<m:sup><m:r><m:t>−</m:t></m:r><m:r><m:t>1</m:t></m:r></m:sup></m:sSup>'))
+        format_math(doc, {})
+        self.assertFalse(layout_issues(doc))
+        exponent = math.find('.//' + qn('m:sup'))
+        self.assertIsNotNone(exponent.find(qn('m:box')))
+        self.assertEqual(''.join(t.text for t in exponent.iter(qn('m:t'))), '−1')
+        p.paragraph_format.space_after = Pt(0)
+        self.assertTrue(any('여백' in issue for issue in layout_issues(doc)))
+        p.paragraph_format.alignment = 0
+        self.assertTrue(any('가운데' in issue for issue in layout_issues(doc)))
+
     def test_fraction_growth_and_centering_preserve_equation_content(self):
         doc=Document()
         p=doc.add_paragraph()

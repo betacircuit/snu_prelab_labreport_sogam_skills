@@ -78,6 +78,15 @@ class RuntimeTests(unittest.TestCase):
                 entry = slot / "SKILL.md"
                 front = yaml.safe_load(entry.read_text(encoding="utf-8").split("---", 2)[1])
                 self.assertEqual(front["name"], slot.name)
+                host_name = 'codex' if host == '.agents' else 'claude'
+                other_host = 'claude' if host == '.agents' else 'codex'
+                text = entry.read_text(encoding='utf-8')
+                if slot.name == 'snu-lab-photo':
+                    self.assertIn(host_name, text.lower())
+                    self.assertNotIn(other_host, text.lower())
+                else:
+                    self.assertIn('runtime-' + host_name + '.md', text)
+                    self.assertNotIn('runtime-' + other_host + '.md', text)
                 for destination in __import__('re').findall(r"\]\(([^)]+)\)", entry.read_text(encoding="utf-8")):
                     self.assertTrue((entry.parent / destination).is_file(), destination)
 
@@ -216,6 +225,20 @@ class QualityTests(unittest.TestCase):
         (self.lab / "source.txt").write_text("changed")
         with self.assertRaises(ValueError):
             quality.verify_build(self.docx, self.lab, "report")
+
+    def test_old_engine_cannot_deliver_even_after_page_review(self):
+        self.record_build()
+        self.create_render_fixture()
+        quality.review(self.docx, [1, 2])
+        with patch.object(quality, 'engine_fingerprint', return_value={'scripts/math_layout.py': 'changed'}):
+            with self.assertRaisesRegex(ValueError, '생성 엔진'):
+                quality.deliver(self.docx, self.lab, 'report')
+        record_path = quality.qa_dir(self.docx) / 'build.json'
+        record = json.loads(record_path.read_text(encoding='utf-8'))
+        del record['engine_sha256']
+        quality.save_json(record_path, record)
+        with self.assertRaisesRegex(ValueError, '버전 기록'):
+            quality.verify_build(self.docx, self.lab, 'report')
 
     def test_missing_image_cannot_be_delivered_as_final(self):
         (self.lab / "report/report.md").write_text(self.raw + '\n![measurement](missing.png)\n', encoding="utf-8")

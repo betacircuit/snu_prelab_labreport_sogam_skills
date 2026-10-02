@@ -24,9 +24,9 @@
 3. 설치 요청은 `bootstrap.py --agent codex --yes`로 처리한다. 스킬만 갱신할 때는 `--skills-only`. Codex만 요청했으면 Claude 플러그인이나 Claude 앱 설정을 변경하지 않는다. 네트워크·설치 권한은 현재 세션의 권한 규칙을 따른다.
 4. 자료 읽기 → 원문 문항·근거 대응 → 계산 → 원고 → 빌드 → 렌더링 → 모든 쪽 이미지 확인 순서다. 내용 기준은 [report-quality.md](report-quality.md). 원고·문항표·수치가 일치하기 전에는 꾸미기에 시간을 쓰지 않는다.
 5. 빌드할 때 경로는 절대 경로로 전달하고 PowerShell에서는 `& 'Python 경로' '스크립트 경로' ...`처럼 인자를 나눈다. 엔진과 과제 폴더를 구분하고 Linux의 `:` 리소스 경로를 Windows에 그대로 쓰지 않는다.
-6. Codex 문서 스킬의 렌더러가 제공되면 그 `render_docx.py` 절대 경로를 `quality.py render --renderer <경로>`에 전달한다. 번들 렌더링 도구를 우선한다. 제공되지 않거나 실행이 불가능하면 가능한 내용·OOXML 검사를 진행하고 렌더링 미검증 사실을 알린다. 프로그램이 없다는 이유로 문서 작업 전체를 중단하거나 검증 완료를 주장하지 않는다.
+6. Codex 문서 스킬의 렌더러가 제공되면 그 `render_docx.py` 절대 경로를 `quality.py render --renderer <경로>`에 전달한다. 번들 렌더링 도구를 우선한다. Windows에 Microsoft Word가 있으면 `quality.py render 파일.docx --word`로 실제 Word의 읽기 전용 PDF·PNG 렌더링을 검증 기록에 연결할 수 있다. 렌더링 도구가 모두 없거나 실행이 불가능하면 가능한 내용·OOXML 검사를 진행하고 렌더링 미검증 사실을 알린다. 프로그램이 없다는 이유로 검증 완료를 주장하지 않는다.
 7. `quality.py render`가 만든 **최신 DOCX의 모든 쪽**을 `view_image` 등 실제 이미지 읽기 도구로 확인한다. 접촉 시트는 탐색용이며 작은 글자·수식·장비 숫자는 각 쪽/확대 이미지로 확인한다. 이미지를 열지 않고 검토 완료를 기록하지 않는다.
-8. 전체 확인 후 `quality.py review 파일.docx --pages 1,2,...`로 기록하고 `quality.py deliver 파일.docx --lab-dir <과제 폴더> --kind <prelab|report|hw>`로 최종 전달 사본을 만든다. 파일이 바뀌면 검토 기록은 무효가 된다. 최종 파일은 실제 절대 경로 링크로 전달하고, 초안이면 빠진 자료를 함께 명시한다.
+8. 전체 확인 후 `quality.py review 파일.docx --pages 1,2,...`로 기록하고 `quality.py deliver 파일.docx --lab-dir <과제 폴더> --kind <prelab|report|hw>`로 최종 전달 사본을 만든다. 파일 또는 생성 엔진이 바뀌면 다시 빌드·렌더링·검토한다. 기존 `out/<과목>/` 파일을 수정했다면 별도 비교본만 만들고 끝내지 말고, 그 실제 전달 경로도 검증한 최신 파일로 갱신한다. 최종 파일은 실제 절대 경로 링크로 전달하고, 초안이면 빠진 자료를 함께 명시한다.
 9. LTspice 화면 조작은 제공된 **computer-use 스킬**을 읽고 해당 도구로 진행한다. Windows 플러그인의 `node_repl` + `@oai/sky`와 브라우저용 `cua_repl`은 별개다. 브라우저 도구의 native apps 비활성 문구만 보고 Windows computer-use도 없다고 판단하지 않는다. 실제 앱·창을 열거해 고른 뒤 관찰 → 한 동작 → 재관찰로 진행한다. 상세 절차는 과목 스킬의 LTspice 문서를 따른다.
 
 호스트 선택은 현재 대화가 알려 준 실행 환경이 기준이다. 머신에 Claude·Codex가 둘 다 설치됐다는 사실이나 모델 이름으로 선택하지 않는다. `--agent`는 설치 대상 선택이며 보고서 품질·출처 규칙을 바꾸지 않는다.
