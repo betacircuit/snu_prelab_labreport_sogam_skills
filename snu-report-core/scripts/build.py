@@ -11,8 +11,8 @@
 
 원고 문법 (pandoc markdown + 아래 확장):
   # 제목               → 자동 번호 "1." / "1.1)" (style.yaml numbering.heading)
-  # 4.2 3-bit comparator → "2. 4.2) 3-bit comparator" (가이드북 문항 번호에 ')'를 붙인다, proof.normalize_headings)
-  ## 4.2 가 설계         → "2.1) 가) 설계" (상위 절과 같은 문항 번호는 되풀이하지 않는다)
+  # 4.2 3-bit comparator → "2. 3-bit comparator" (원문 번호는 원고·requirements.yaml에 보존)
+  ## 3) 120 nF           → "2.3) 120 nF" (제목 번호는 한 번만 표시)
   # 참고문헌 {-}        → 번호 없는 제목
   ![캡션](figs/a.png){#fig:and width=60%}   → 틀 안 "Fig.1 - 캡션" (style.yaml caption_format)
   Table: 캡션 {#tbl:tt}                      → 표 맨 아래 캡션 행 "Table.1 - 캡션"
@@ -231,6 +231,7 @@ def _strip_id(attr: str | None) -> str:
 
 
 def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
+    from proof import strip_heading_labels
     num = st["numbering"]
     fig_p, tbl_p = num["figure_prefix"], num["table_prefix"]
     cap_fmt = num.get("caption_format", "{prefix}.{n} - {text}")
@@ -262,7 +263,7 @@ def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
                     h[i] = 0
                 fmts = num.get("heading_formats", ["{0}.", "{0}.{1}", "{0}.{1}.{2}"])
                 n = fmts[lvl - 1].format(*h[:lvl])
-                line = f"{m['hash']} {n} {m['text']} {attr}".rstrip()
+                line = f"{m['hash']} {n} {strip_heading_labels(m['text'])} {attr}".rstrip()
             out.append(line)
             continue
 

@@ -104,8 +104,11 @@ def check_docx(path: Path) -> dict:
         errors.append("초안 상태 표시 또는 누락 사진 칸이 남음")
     if re.search(r"\?\?(?:fig|tbl):|@(?:fig|tbl):|\{\{[^}]+\}\}", text):
         errors.append("미해결 그림/표 참조 또는 템플릿 변수가 남음")
-    # The original report format deliberately retains source question IDs after
-    # the decimal outline number (for example, "1. (1) ...").
+    from proof import deduplicate_heading_labels
+    for paragraph in doc.paragraphs:
+        if (paragraph.style.style_id.startswith('Heading')
+                and deduplicate_heading_labels(paragraph.text) != paragraph.text):
+            errors.append('제목 번호 중복: ' + paragraph.text)
     for element in body:
         if element.find('.//' + qn('w:drawing')) is None:
             continue

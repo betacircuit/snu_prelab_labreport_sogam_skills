@@ -126,6 +126,20 @@ class QualityTests(unittest.TestCase):
     def test_good_requirements(self):
         self.assertEqual(quality.check_requirements(self.lab, "report", self.raw), [])
 
+    def test_duplicate_heading_number_blocks_delivery(self):
+        from proof import deduplicate_heading_labels
+        heading = self.document.paragraphs[0]
+        for text in ('2.3) 3) 120 nF', '1. (1) Circuit', '1.1) 가) Transfer'):
+            heading.text = text
+            self.document.save(self.docx)
+            self.assertTrue(any('제목 번호 중복' in e for e in quality.check_docx(self.docx)['errors']))
+        for text in ('2.3) 120 nF', '2.2) 47 nF', '1. 3-bit circuit'):
+            heading.text = text
+            self.document.save(self.docx)
+            self.assertFalse(quality.check_docx(self.docx)['errors'])
+            self.assertEqual(deduplicate_heading_labels(text), text)
+        self.assertEqual(deduplicate_heading_labels('2.3) 3) 120 nF'), '2.3) 120 nF')
+
     def test_unconfirmed_scope_and_missing_source_block(self):
         self.requirements["scope"]["report"]["status"] = "provisional"
         self.requirements["items"][0]["source"] = "missing.txt"
@@ -248,7 +262,7 @@ class QualityTests(unittest.TestCase):
         self.assertTrue((self.ws / "out/drafts/circuit" / output.name).is_file())
         self.assertFalse((self.ws / "out/circuit" / output.name).exists())
         headings = [p.text for p in Document(output).paragraphs if p.style.name.startswith("Heading")]
-        self.assertEqual(headings, ["1. (1) RC gain"])
+        self.assertEqual(headings, ["1. RC gain"])
         quality.verify_build(output, self.lab, "report")
 
     @unittest.skipUnless(shutil.which("pandoc"), "pandoc unavailable")

@@ -57,9 +57,22 @@ class LayoutTests(unittest.TestCase):
         course=yaml.safe_load((ROOT/'snu-circuit-lab/course.yaml').read_text(encoding='utf-8'))
         self.style['numbering']['heading']=course['heading_numbering']
         text,_=build.preprocess('# (1) Circuit\n\n## Transfer function\n\n### Derivation\n',self.style)
-        self.assertIn('# 1. (1) Circuit',text)
+        self.assertIn('# 1. Circuit',text)
         self.assertIn('## 1.1) Transfer function',text)
         self.assertIn('### 1.1.1) Derivation',text)
+
+    def test_heading_numbers_are_single_and_values_are_preserved(self):
+        raw = '# (1) Circuit\n## 1) Setup\n# (2) Amplifier\n## 1) Setup\n## 2) 47 nF\n## 2.3) 3) 120 nF\n## 4) 220 nF\n### 가) 3-bit circuit {#detail}\n'
+        text, _ = build.preprocess(raw, self.style)
+        self.assertIn('## 2.2) 47 nF', text.replace('\u00a0', ' '))
+        self.assertIn('## 2.3) 120 nF', text.replace('\u00a0', ' '))
+        self.assertIn('## 2.4) 220 nF', text.replace('\u00a0', ' '))
+        self.assertIn('### 2.4.1) 3-bit circuit {#detail}', text)
+        self.assertEqual(build.preprocess(text, self.style)[0], text)
+        self.style['numbering']['heading'] = False
+        self.assertEqual(build.preprocess(raw, self.style)[0], build.nbsp_text(raw.rstrip()))
+        self.style['numbering']['heading'] = True
+        self.assertEqual(build.preprocess('# (1) Source {-}', self.style)[0], '# (1) Source {-}')
 
     def test_long_table_can_continue_with_repeated_header_and_padding(self):
         doc = Document()

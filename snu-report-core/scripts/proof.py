@@ -34,6 +34,22 @@ KO_ENUM = "가나다라마바사아자차카타파하"
 GUIDE_NUM = r"\d+(?:\.\d+)+(?:\.?[a-z])?|\d+\.[a-z]|\d+[a-z](?![a-z])"
 HEAD_LABEL_RE = re.compile(rf"^(?P<num>{GUIDE_NUM})(?P<tail>\)[a-z]\)?|\)|\.)?(?=\s)\s+(?P<rest>.*)$")
 KO_LABEL_RE = re.compile(rf"^(?P<ko>[{KO_ENUM}])(?:\)|\.|(?=\s))\s*(?P<rest>.+)$")
+HEADING_PREFIX_RE = re.compile(
+    rf"^(?:\(\d+(?:\.\d+)*\)|\d+(?:\.(?:\d+|[a-z]))*(?:\)[a-z]\)?|[.)])|[{KO_ENUM}a-z][.)])\s+"
+)
+
+
+def strip_heading_labels(text: str) -> str:
+    """자동 절 번호를 붙이기 전 기존 번호만 제거. '120 nF', '3-bit'는 제목 내용이다."""
+    while match := HEADING_PREFIX_RE.match(text):
+        text = text[match.end():]
+    return text
+
+
+def deduplicate_heading_labels(text: str) -> str:
+    """이미 생성된 제목은 첫 절 번호를 유지하고 뒤의 문항 번호만 제거한다."""
+    match = HEADING_PREFIX_RE.match(text)
+    return text[:match.end()] + strip_heading_labels(text[match.end():]) if match else text
 
 
 def fix_heading(text: str, parent: str | None) -> tuple[str, str | None]:
