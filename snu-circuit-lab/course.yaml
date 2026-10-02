@@ -2,7 +2,7 @@
 key: circuit
 course: "회로이론 및 실험"
 skill: snu-circuit-lab
-heading_numbering: false  # 교재의 (1), 1) 문항 번호를 보존한다.
+heading_numbering: true   # Claude 원본과 같은 1. → 1.1) → 1.1.1) 절 번호
 team: ""
 teammates: []
 filename:

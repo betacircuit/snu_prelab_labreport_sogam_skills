@@ -16,7 +16,7 @@ from docx.enum.table import WD_ROW_HEIGHT_RULE
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'snu-report-core/scripts'))
 sys.path.insert(0, str(ROOT/'snu-lab-photo/scripts'))
-from math_layout import format_math, layout_issues, width_pt
+from math_layout import format_math, layout_issues, width_pt, group_script_arguments
 from docx_post import clean_paragraphs, space_after_figures
 from enhance_scope import enhance, rectify
 from ooxml_order import normalize_document
@@ -95,7 +95,7 @@ class MathAndGapTests(unittest.TestCase):
         math=p._p.find('.//'+qn('m:oMath'))
         self.assertLess(width_pt(math), 70)
 
-    def test_after_figure_gap_uses_paragraph_spacing_without_blank_enters(self):
+    def test_after_figure_has_one_real_blank_paragraph_and_survives_cleanup(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'synthetic.png'
             Image.new('RGB',(40,30),'black').save(path)
@@ -106,9 +106,41 @@ class MathAndGapTests(unittest.TestCase):
             text=doc.add_paragraph('Interpretation after the figure.')
             clean_paragraphs(doc,{})
             space_after_figures(doc,{})
-            self.assertEqual(len(doc.paragraphs),1)
-            self.assertEqual(text.paragraph_format.space_before.pt,12)
+            clean_paragraphs(doc,{})
+            space_after_figures(doc,{})
+            self.assertEqual(len(doc.paragraphs),2)
+            spacer=doc.paragraphs[0]
+            self.assertEqual(spacer.text,'')
+            self.assertEqual(spacer.style.name,'Figure Spacer')
+            self.assertIs(spacer._p.getprevious(),table._tbl)
+            self.assertIs(spacer._p.getnext(),text._p)
+            self.assertEqual(text.paragraph_format.space_before.pt,0)
             self.assertIsNone(table.cell(1,0).paragraphs[0].paragraph_format.space_before)
+
+    def test_multi_token_script_groups_preserve_signed_exponent_and_styles(self):
+        from lxml import etree
+        doc=Document()
+        p=doc.add_paragraph()
+        p._p.append(parse_xml('<m:oMathPara '+nsdecls('m','w')+'><m:oMath>'
+            '<m:sSub><m:e><m:r><m:t>φ</m:t></m:r></m:e><m:sub>'
+            '<m:r><m:t>C</m:t></m:r><m:r><m:t>H</m:t></m:r><m:r><m:t>2</m:t></m:r>'
+            '<m:r><m:rPr><m:sty m:val="p"/></m:rPr><m:t>−</m:t></m:r>'
+            '<m:r><m:t>CH1</m:t></m:r></m:sub></m:sSub>'
+            '<m:sSup><m:e><m:r><m:t>10</m:t></m:r></m:e><m:sup>'
+            '<m:argPr><m:argSz m:val="0"/></m:argPr>'
+            '<m:r><m:t>−</m:t></m:r><m:r><m:t>6</m:t></m:r>'
+            '</m:sup></m:sSup></m:oMath></m:oMathPara>'))
+        runs=[etree.tostring(r) for r in p._p.iter(qn('m:r'))]
+        self.assertTrue(any('세로 쌓임' in x for x in layout_issues(doc)))
+        self.assertEqual(group_script_arguments(doc.element.body),2)
+        self.assertEqual(group_script_arguments(doc.element.body),0)
+        self.assertEqual(runs,[etree.tostring(r) for r in p._p.iter(qn('m:r'))])
+        for tag,text in [('m:sub','CH2−CH1'),('m:sup','−6')]:
+            argument=p._p.find('.//'+qn(tag))
+            self.assertEqual(''.join(t.text for t in argument.iter(qn('m:t'))),text)
+            self.assertIsNotNone(argument.find(qn('m:box')))
+        format_math(doc,{})
+        self.assertFalse(layout_issues(doc))
 
 
 class PhotoTests(unittest.TestCase):

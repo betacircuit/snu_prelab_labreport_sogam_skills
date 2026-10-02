@@ -662,29 +662,49 @@ def postprocess(docx_path, st: dict):
 
 
 def space_after_figures(doc, st: dict) -> int:
-    """사진+캡션 뒤 본문을 12pt 띄운다. 빈 Enter를 추가하지 않는다."""
-    gap = round(float(st.get("spacing", {}).get("figure_after", 12))*20)
+    """사진+캡션 뒤에 실제 빈 문단(Enter) 하나를 둔다. 재실행해도 중복하지 않는다."""
+    from docx.enum.style import WD_STYLE_TYPE
+    from docx.shared import Pt
+    gap = float(st.get("spacing", {}).get("figure_after", 12))
+    if 'Figure Spacer' not in doc.styles:
+        doc.styles.add_style('Figure Spacer', WD_STYLE_TYPE.PARAGRAPH)
+    style = doc.styles['Figure Spacer']
+    style.font.size = Pt(gap)
+    style.paragraph_format.space_before = Pt(0)
+    style.paragraph_format.space_after = Pt(0)
+    style.paragraph_format.line_spacing = 1.0
+    style.paragraph_format.keep_with_next = True
+    style.paragraph_format.keep_together = True
     count = 0
     for element in list(doc.element.body):
         if element.find('.//' + qn('w:drawing')) is None:
             continue
+        anchor = element
         following = element.getnext()
         if following is not None and p_style(following) == 'ImageCaption':
+            anchor = following
             following = following.getnext()
-        if following is None or following.tag != qn('w:p'):
+        if following is None or following.tag == qn('w:sectPr'):
             continue
-        ppr = _ppr(following)
-        spacing = ppr.find(qn('w:spacing'))
-        if spacing is None:
-            spacing = _set_child(ppr, 'w:spacing')
-        if not p_text(following).strip() and following.find('.//' + qn('w:drawing')) is None:
-            # 두 표 사이의 필수 구분 문단 하나만 간격 역할을 맡는다.
-            spacing.set(qn('w:lineRule'), 'exact')
-            spacing.set(qn('w:line'), str(gap))
-        else:
-            spacing.set(qn('w:before'), str(max(gap, int(spacing.get(qn('w:before'), 0)))))
-            spacing.set(qn('w:beforeAutospacing'), '0')
-            _set_child(ppr, 'w:contextualSpacing', **{'w:val':'0'})
+        # Reuse the one existing plain separator; do not erase page breaks or fields.
+        empty = (following.tag == qn('w:p') and not p_text(following).strip()
+                 and not any(following.find('.//' + qn(tag)) is not None for tag in
+                             ('w:drawing','m:oMath','w:br','w:sectPr','w:bookmarkStart','w:fldChar','w:fldSimple')))
+        spacer = following if empty else _el('w:p')
+        if not empty:
+            anchor.addnext(spacer)
+        ppr = _ppr(spacer)
+        _set_child(ppr, 'w:pStyle', **{'w:val':style.style_id})
+        _set_child(ppr, 'w:spacing', **{'w:before':0, 'w:after':0, 'w:line':240, 'w:lineRule':'auto'})
+        _set_child(ppr, 'w:keepNext')
+        _set_child(ppr, 'w:keepLines')
+        # Paragraph-mark size makes an empty line visible even in lightweight viewers.
+        mark = ppr.find(qn('w:rPr'))
+        if mark is None:
+            mark = _el('w:rPr')
+            ppr.append(mark)
+        _set_child(mark, 'w:sz', **{'w:val':round(gap*2)})
+        _set_child(mark, 'w:szCs', **{'w:val':round(gap*2)})
         count += 1
     return count
 
@@ -777,11 +797,13 @@ def force_black_text(doc) -> int:
 
 
 def clean_paragraphs(doc, st: dict) -> int:
-    """빈 Enter와 본문의 강제 줄바꿈을 정리하고 문단 간격을 서식으로 지정."""
+    """불필요한 빈 문단은 정리하되 사진 뒤의 의도한 Enter 한 줄은 보존."""
     body = doc.element.body
     count = 0
     text_styles = {None, "Normal", "BodyText", "FirstParagraph", "Compact"}
     for p in list(body.findall(qn("w:p"))):
+        if p_style(p) == 'FigureSpacer':
+            continue
         structural = any(p.find('.//' + qn(tag)) is not None for tag in
                          ("w:drawing", "m:oMath", "m:oMathPara", "w:sectPr", "w:pageBreakBefore", "w:bookmarkStart"))
         breaks = list(p.iter(qn("w:br")))

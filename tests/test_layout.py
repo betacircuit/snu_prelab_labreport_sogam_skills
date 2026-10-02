@@ -41,6 +41,7 @@ class LayoutTests(unittest.TestCase):
         self.assertFalse((self.folder / 'build/placeholders').exists())
 
     def test_portrait_frame_does_not_expand_to_page_width(self):
+        self.style['frames']['figure_width']='fit'
         image = self.folder / 'portrait.png'
         Image.new('RGB', (200,400), 'white').save(image)
         doc = Document()
@@ -51,6 +52,14 @@ class LayoutTests(unittest.TestCase):
         width = int(doc.tables[0]._tbl.find('.//' + qn('w:tblW')).get(qn('w:w')))
         self.assertLess(width, 3500)
         self.assertGreater(width, 2800)
+
+    def test_claude_outline_format_is_used_by_circuit_reports(self):
+        course=yaml.safe_load((ROOT/'snu-circuit-lab/course.yaml').read_text(encoding='utf-8'))
+        self.style['numbering']['heading']=course['heading_numbering']
+        text,_=build.preprocess('# (1) Circuit\n\n## Transfer function\n\n### Derivation\n',self.style)
+        self.assertIn('# 1. (1) Circuit',text)
+        self.assertIn('## 1.1) Transfer function',text)
+        self.assertIn('### 1.1.1) Derivation',text)
 
     def test_long_table_can_continue_with_repeated_header_and_padding(self):
         doc = Document()

@@ -31,12 +31,35 @@ def is_display(paragraph):
         and not ''.join(t.text or '' for t in paragraph.iter(qn('w:t'))).strip())
 
 
+def group_script_arguments(root):
+    """Keep multi-token scripts horizontal in Word and MathML-based previews.
+
+    A transparent OMML box groups the original nodes without merging runs,
+    changing their styling, or losing a unary minus in a signed exponent.
+    """
+    count = 0
+    for tag in ('m:sub', 'm:sup', 'm:deg'):
+        for argument in list(root.iter(qn(tag))):
+            children = [c for c in argument if c.tag != qn('m:argPr')]
+            if len(children) <= 1:
+                continue
+            box = OxmlElement('m:box')
+            content = OxmlElement('m:e')
+            box.append(content)
+            argument.insert(argument.index(children[0]), box)
+            for child in children:
+                content.append(child)
+            count += 1
+    return count
+
+
 def format_math(doc, style):
     """Center display equations; retain inline flow and native fractions/subscripts."""
     spacing = style.get('spacing', {})
     settings = ensure(doc.settings.element, 'm:mathPr')
     put(settings, 'm:mathFont', **{'m:val':'Cambria Math'})
     put(settings, 'm:defJc', **{'m:val':'center'})
+    group_script_arguments(doc.element.body)
     count = 0
     for paragraph in doc.element.body.iter(qn('w:p')):
         if paragraph.find('.//' + qn('m:oMath')) is None:
@@ -139,6 +162,10 @@ def available_width_pt(doc, paragraph):
 
 def layout_issues(doc):
     issues = []
+    for tag in ('m:sub', 'm:sup', 'm:deg'):
+        for argument in doc.element.body.iter(qn(tag)):
+            if len([c for c in argument if c.tag != qn('m:argPr')]) > 1:
+                issues.append('여러 조각의 첨자/지수가 묶이지 않음 — 미리보기 세로 쌓임·부호 누락 위험')
     for paragraph in doc.element.body.iter(qn('w:p')):
         maths = list(paragraph.iter(qn('m:oMath')))
         if not maths:

@@ -44,7 +44,7 @@ title_block:
 frames:
   enabled: true
   border: single          # 그림 틀 테두리 (single / none)
-  figure_width: fit       # 사진/회로도와 캡션에 맞춘 폭. 세로 사진 옆을 빈 틀로 채우지 않는다.
+  figure_width: full      # Claude 원본과 같은 본문 폭 틀. 사진 자체는 아래 상한을 지킨다.
   caption_bold: false     # 캡션 굵게 여부
   max_height_fraction: 0.55  # 기본 상한. 축/측정값이 읽히는 범위에서 설명 공간 확보
   max_width_mm: 140       # 원고 width=100%보다도 우선하는 실제 출력 상한
@@ -52,7 +52,7 @@ frames:
   portrait_max_height_mm: 80 # 세로가 가로의 1.25배 이상인 이미지
 
 table:
-  font_size: 10.5
+  font_size: 10
   cell_padding_twips: 100 # 위/아래 5pt. 고정 행 높이를 쓰지 않는다.
   header_bold: false      # 머리행 글자 굵게 여부 (예시 양식: 보통)
   header_fill: none       # 머리행 음영 (none 또는 "F2F2F2" 같은 색)
@@ -84,7 +84,7 @@ size:
 spacing:
   line: 1.35              # 줄 간격 (배수)
   para_after: 6           # 문단 뒤 간격 pt
-  figure_after: 12        # 그림+캡션 뒤 본문과의 간격. 빈 Enter 대신 문단 서식
+  figure_after: 12        # 그림+캡션 뒤 실제 빈 문단(Enter) 한 줄의 글자 크기 pt
   math_before: 8
   math_after: 8
   math_line: 1.25         # auto 배수: 분수·근호·첨자에 맞춰 높이 확장, 고정 pt 금지

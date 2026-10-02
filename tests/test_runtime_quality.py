@@ -248,7 +248,7 @@ class QualityTests(unittest.TestCase):
         self.assertTrue((self.ws / "out/drafts/circuit" / output.name).is_file())
         self.assertFalse((self.ws / "out/circuit" / output.name).exists())
         headings = [p.text for p in Document(output).paragraphs if p.style.name.startswith("Heading")]
-        self.assertEqual(headings, ["(1) RC gain"])
+        self.assertEqual(headings, ["1. (1) RC gain"])
         quality.verify_build(output, self.lab, "report")
 
     @unittest.skipUnless(shutil.which("pandoc"), "pandoc unavailable")

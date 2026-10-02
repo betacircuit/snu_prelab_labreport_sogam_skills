@@ -7,6 +7,7 @@ description: 서울대 전기정보공학부 과제 스킬(snu-logic-lab, snu-ci
 
 과목 스킬(`snu-logic-lab`, `snu-circuit-lab`, `snu-em-hw`)이 함께 쓰는 규칙과 도구다. 과목 스킬의 SKILL.md가 여기로 안내한다.
 원고는 마크다운으로 쓰고, `build.py`가 서식을 입혀 docx로 만든다.
+Claude와 Codex는 같은 원고 규칙·계산 도구·서식 원본을 쓴다. Codex 전환을 이유로 절 번호를 끄거나 별도 디자인을 적용하지 않는다. 도구 호출·경로·렌더러만 현재 호스트에 맞춘다. 사용자 추가 서식 요구는 두 흐름이 공유하는 생성 코드에 반영한다.
 
 ## 실행 호스트부터 선택
 현재 대화의 실행 환경이 Codex이면 [references/runtime-codex.md](references/runtime-codex.md), Claude이면 [references/runtime-claude.md](references/runtime-claude.md)를 **하나만** 읽는다. 과목 스킬을 직접 실행해도 이 분기는 먼저 적용한다. 사용자 PC에 어떤 앱이 설치됐는지로 현재 호스트를 추측하지 않는다. 공통 내용 규칙은 [references/report-quality.md](references/report-quality.md)다.
@@ -146,10 +147,10 @@ sys.path.insert(0, str(ENGINE))
 | 쓰는 법 | 결과 |
 |---|---|
 | `# 제목`, `## 소제목` | `1. 제목`, `1.1) 소제목` |
-| `# 4.2) 3-bit comparator`, `## 가) 설계` | `2. 4.2) 3-bit comparator`, `2.1) 가) 설계` — 가이드북 문항 번호에 `)`. 빠뜨려도 build.py가 붙인다 |
+| `# 4.2) 3-bit comparator`, `## 설계` | `2. 4.2) 3-bit comparator`, `2.1) 설계`. 원문에 없는 `가)·나)·다)`는 붙이지 않는다 |
 | `# 제목 {-}` | 번호 없는 제목 |
 | `![캡션](figs/a.png){#fig:x width=80%}` | 그림 틀과 `Fig.1 - 캡션` |
-| 그림 파일이 아직 없을 때 `{… hint="무엇을 찍을지"}` | 노란 '사진 넣을 곳' 칸 (캡션·hint·파일 이름이 적힘). 사진을 같은 이름으로 넣고 다시 빌드하면 바뀐다. `--final`이면 멈춘다 |
+| 그림 파일이 아직 없을 때 `{… hint="무엇을 찍을지"}` | 초안에 한 줄 누락 표시. 사진을 같은 이름으로 넣고 다시 빌드한다. `--final`이면 멈춘다 |
 | 표 위에 `Table: 캡션 (단위: ns) {#tbl:x}` | 표 맨 아래 캡션 행 `Table.1 - 캡션` |
 | `@fig:x과`, `@tbl:x의` | `Fig.1과`, `Table.1의` |
 | `$Y_1 = \overline{AB}$`, `$$…$$` | Word 수식 (연산자 공백 자동) |

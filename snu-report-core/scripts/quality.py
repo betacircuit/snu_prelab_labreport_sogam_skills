@@ -104,9 +104,21 @@ def check_docx(path: Path) -> dict:
         errors.append("초안 상태 표시 또는 누락 사진 칸이 남음")
     if re.search(r"\?\?(?:fig|tbl):|@(?:fig|tbl):|\{\{[^}]+\}\}", text):
         errors.append("미해결 그림/표 참조 또는 템플릿 변수가 남음")
-    for p in doc.paragraphs:
-        if p.style.name.startswith("Heading") and re.match(r"\d+[.)]\s*\(\d+\)", p.text):
-            warnings.append("자동 절 번호와 원문 번호가 겹침: " + p.text)
+    # The original report format deliberately retains source question IDs after
+    # the decimal outline number (for example, "1. (1) ...").
+    for element in body:
+        if element.find('.//' + qn('w:drawing')) is None:
+            continue
+        following = element.getnext()
+        if following is not None:
+            ps = following.find('./' + qn('w:pPr') + '/' + qn('w:pStyle'))
+            if ps is not None and ps.get(qn('w:val')) == 'ImageCaption':
+                following = following.getnext()
+        if following is None or following.tag == qn('w:sectPr'):
+            continue
+        if (following.tag != qn('w:p') or ''.join(following.itertext()).strip()
+                or following.find('.//' + qn('w:drawing')) is not None):
+            errors.append('그림·캡션 뒤 실제 빈 문단(Enter)이 없음')
     sizes = [(s.page_width-s.left_margin-s.right_margin,
               s.page_height-s.top_margin-s.bottom_margin) for s in doc.sections]
     max_width, max_height = max(x[0] for x in sizes), max(x[1] for x in sizes)

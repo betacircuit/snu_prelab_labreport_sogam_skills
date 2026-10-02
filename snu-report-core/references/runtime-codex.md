@@ -2,6 +2,23 @@
 
 현재 호스트가 Codex일 때만 읽는다. Claude 실행 문서는 함께 읽지 않는다.
 
+## Claude 기능과 양식의 유지
+이것은 Codex용 실행 절차다. Claude에서 사용하던 공통 엔진의 계산·근거표·회로도·문체·교정·DOCX 생성 기능을 그대로 호출하며, 기능을 채팅 답변이나 임의의 새 문서 생성기로 대체하지 않는다. 내용과 서식의 원본은 `templates/style.yaml` 및 `format.md`다. Codex documents 스킬은 문서 도구·렌더링·검증에 적용하고, 그 일반 디자인 기본값으로 이 보고서 양식을 다시 꾸미지 않는다.
+
+| 기존 기능 | Codex에서 실행할 원본 |
+|---|---|
+| 자료 분류·문항 대응 | `ingest.py`, `requirements.md`·`requirements.yaml` |
+| 측정 근거·계산 | `evidence.py`, `scope.py`, `compare.py`, sympy/numpy |
+| 회로·논리·배선 검증 | `circuit_kit.py`, `logic.py`, `pinmap.py`, `timing.py` |
+| LTspice | `spice.py`로 수치 확인, 제공된 Windows computer-use로 화면 확인·깨끗한 출력 |
+| 문체·오탈자 | `style_check.py`, `proof.py`, 과목/공통 mistakes.md |
+| Word 양식 | `make_template.py` → `build.py` → `docx_post.py`·`math_layout.py` |
+| 결과 검토·전달 | Codex 번들 렌더러 → 전 쪽 읽기 → `quality.py review`·`deliver` |
+
+맑은 고딕, 가운데 제목 블록, 10 pt 표, 본문 폭 그림 틀, `1.` → `1.1)` → `1.1.1)` 절 번호는 호스트 때문에 달라지지 않는다. 사용자 추가 요구인 검정 글씨 고정·사진 크기 제한·사진 뒤 실제 Enter 한 줄·독립 수식 중앙 정렬·첨자 호환 처리를 함께 적용한다. 실제 출력에서 달라졌으면 설치 성공과 별개로 수정한다.
+
+## 실행 순서
+
 1. 설치된 스킬 목록의 실제 `SKILL.md` 경로를 기준으로 공통 엔진을 찾는다. 경로가 바로가기이면 대상을 먼저 해석한다. 저장소에서는 `snu-report-core/scripts`, 사용자 설치에서는 과목 스킬과 같은 부모의 `snu-report-core/scripts`가 엔진이다. `/mnt/skills`, `~/.claude`를 가정하지 않는다.
 2. 문서 작업에 제공된 documents 스킬이 있으면 읽고, `load_workspace_dependencies` 도구가 있으면 Python·문서 도구의 실제 경로를 확인한다. 도구가 없는 CLI에서는 현재 Python과 `bootstrap.py --agent codex --check`로 확인한다. 필요한 의존성만 작업 환경에 준비한다. 스킬 수정·검토 요청에는 학생 프로필 초기화가 필요 없다.
 3. 설치 요청은 `bootstrap.py --agent codex --yes`로 처리한다. 스킬만 갱신할 때는 `--skills-only`. Codex만 요청했으면 Claude 플러그인이나 Claude 앱 설정을 변경하지 않는다. 네트워크·설치 권한은 현재 세션의 권한 규칙을 따른다.
