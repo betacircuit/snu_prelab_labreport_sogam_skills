@@ -10,7 +10,7 @@
 | 자료 분류·문항 대응 | `ingest.py`, `requirements.md`·`requirements.yaml` |
 | 측정 근거·계산 | `evidence.py`, `scope.py`, `compare.py`, sympy/numpy |
 | 회로·논리·배선 검증 | `circuit_kit.py`, `logic.py`, `pinmap.py`, `timing.py` |
-| LTspice | `spice.py`로 수치 확인, 제공된 Windows computer-use로 화면 확인·깨끗한 출력 |
+| LTspice·주파수 응답 | `spice.py`로 수치 확인, `bode.py`로 보드 선도·페이저도, 제공된 Windows computer-use로 화면 확인·깨끗한 출력 |
 | 문체·오탈자 | `style_check.py`, `proof.py`, 과목/공통 mistakes.md |
 | Word 양식 | `make_template.py` → `build.py` → `docx_post.py`·`math_layout.py` |
 | 결과 검토·전달 | Codex 번들 렌더러 → 전 쪽 읽기 → `quality.py review`·`deliver` |

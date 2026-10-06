@@ -463,6 +463,9 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     meta_talk = [w for w in proof_warns if w.startswith("[본인 글]")]
     if meta_talk:   # 보고서는 본인이 쓴 글이어야 한다 — '사용자', AI, '수정 전 코드' 같은 말이 있으면 만들지 않는다
         sys.exit(f"✗ 본인이 쓴 글로 읽히지 않는 표현 {len(meta_talk)}곳 — 위 [본인 글]을 고친 뒤 다시 빌드")
+    code_names = [w for w in proof_warns if w.startswith("[표기]")]
+    if code_names:   # atan2·numpy 같은 계산 프로그램 이름은 교재 표기(tan⁻¹, ∠)로 바꿔야 만든다
+        sys.exit(f"✗ 프로그래밍 함수 이름이 본문·수식에 {len(code_names)}곳 — 위 [표기]를 교재 표기로 고친 뒤 다시 빌드")
 
     code = lab_dir / "code" / f"HW{v['lab_num']}.m" if kind == "hw" else None
     if code is not None:   # 기초전자기학 HW: 같이 내는 MATLAB 코드 검사 (mcode.py)
@@ -537,7 +540,7 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         one_column_cover(out_docx)
     print("✓", out_docx)
     for w in check_text(docx_text(out_docx), is_docx=True):   # 빌드 결과를 다시 읽어 확인 (원고 검사와 겹치지 않는 것만)
-        if w.startswith(("[제목 번호]", "[참조]", "[표시]", "[괄호]")):
+        if w.startswith(("[제목 번호]", "[참조]", "[표시]", "[괄호]", "[표기]")):
             print("  결과물 ⚠", w, file=sys.stderr)
     # 렌더링과 검토가 끝나기 전 사본은 초안 경로에만 둔다.
     ws = find_workspace(lab_dir)

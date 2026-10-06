@@ -27,6 +27,9 @@
 
 같은 내용(sha256) 파일은 한 번만 저장. PDF는 옆에 .txt(텍스트 추출)를 만들어 Claude가 바로 읽을 수 있게 한다.
 Lab NN 자료가 새로 들어오면 courses/<과목>/labNN/meta.yaml, requirements.md 초안을 만든다 (이미 있으면 건드리지 않음).
+교재(파일명에 교재/textbook, 또는 목차에 실험이 여럿)는 courses/<과목>/materials/textbook.pdf로 두고,
+교재의 "모의 실험 보고서"(prelab)·"실험 보고서"(report) 문항을 쪽 번호와 함께 requirements.yaml 초안으로 뽑는다.
+  python ingest.py --course circuit --questions 03     # 교재를 나중에 올렸을 때 Lab 03 문항만 다시 뽑기
 """
 from __future__ import annotations
 
@@ -161,6 +164,16 @@ def lab_from_content(path: Path):
     return None, ""
 
 
+def is_textbook(path: Path, stem: str) -> bool:
+    """실험 여러 개가 든 교재 한 권인가: 파일명이 교재/textbook이거나, 앞 3쪽(목차)에 실험 번호가 셋 이상"""
+    if re.search(r"(?i)교재|textbook|text\s*book|실험\s*(?:서|교본)|lab\s*manual", stem):
+        return True
+    if path.suffix.lower() != ".pdf":
+        return False
+    nums = {int(m.group(1)) for r in LAB_ALT_RES[:1] + LAB_ALT_RES[2:3] for m in r.finditer(head_text(path, 20000))}
+    return len({n for n in nums if 1 <= n <= 20}) >= 3
+
+
 DATE8 = re.compile(r"(?<!\d)(20\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?([0-3]\d)(?!\d)")
 KO_DATE = re.compile(r"(?:(20\d{2})\s*년\s*)?(\d{1,2})\s*월\s*(\d{1,2})\s*일")
 
@@ -272,6 +285,8 @@ def classify(path: Path, forced_lab: str | None, croot: Path | None = None):
         return f"{int(m.group(2)):02d}", "submitted", canon, "제출 파일명"
 
     lab, why = (forced_lab, "--lab") if forced_lab else lab_from_name(stem)
+    if lab is None and is_textbook(path, stem):   # 여러 실험이 든 교재 한 권 → 과목 공통 자료
+        return "00", "materials", "textbook" + ext, "교재 (여러 실험)"
     if lab is None:
         lab, why = lab_from_content(path)
     if lab is None and croot is not None:
@@ -408,15 +423,22 @@ def draft_meta_and_requirements(lab_dir: Path, lab: str):
         meta_p.write_text(yaml.safe_dump(meta, allow_unicode=True, sort_keys=False), encoding="utf-8")
         print("  + meta.yaml 초안", *[f"\n    ⚠ {n}" for n in notes])
 
-    # requirements.md
+    # requirements.md (+ 교재 문항이 보이면 requirements.yaml 초안)
+    secs = draft_questions(lab_dir, lab)
     req_p = lab_dir / "requirements.md"
-    if not req_p.exists() and (gtext or stext):
+    if not req_p.exists() and (gtext or stext or secs):
         parts = [f"# Lab {lab} 요구사항 (자동 추출 초안 — 원문과 대조 후 사용)\n"]
+        for kind, sec in secs.items():
+            label = "모의 실험 보고서 (prelab 문항)" if kind == "prelab" else "실험 보고서 (결과보고서 문항)"
+            rows = "\n".join(f"| {i} | p.{pg} | {t[:80]} |" for i, t, pg in sec["items"]) or "| (문항 번호를 못 나눔 — 원문 확인) | | |"
+            parts.append(f"## 교재 p.{sec['page']} {label}\n\n| 문항 | 쪽 | 내용 (앞부분) |\n|:--|:--|:--|\n{rows}\n")
         for label, pat in (("Prelab", r"(?:Pre-?lab|예비\s*(?:실험|보고서|과제)|실험\s*전\s*과제|모의\s*실험\s*보고서)"),
                            ("실험 보고서 (결과보고서 문항)", r"(?:실험\s*보고서|결과\s*보고서)"),
                            ("Lab (실험)", r"(?:Lab|실험\s*(?:방법|절차|내용)?)"),
                            ("Discussion and Matters to Consider",
                             r"(?:Discussion(?: and Matters to Consider)?|결과\s*및\s*토의|토의|고찰)")):
+            if secs and (label.startswith("Prelab") and "prelab" in secs or label.startswith("실험 보고서") and "report" in secs):
+                continue   # 교재 문항 표로 이미 넣었다
             m = re.search(rf"(?ms)^\s*(\d+(?:\.\d+)*)\.?\s+{pat}\s*$(.*?)(?=^\s*\d+(?:\.\d+)*\.?\s+(?:[A-Z][a-z]|[가-힣])|\Z)", gtext)
             if m:
                 body = re.sub(r"\n{3,}", "\n\n", m.group(2)).rstrip()
@@ -429,6 +451,115 @@ def draft_meta_and_requirements(lab_dir: Path, lab: str):
         parts.append("## 보고서 대응표 (Claude가 채움)\n\n| 요구 항목 | 보고서 위치 | 상태 |\n|:--|:--|:--|\n")
         req_p.write_text("\n".join(parts), encoding="utf-8")
         print("  + requirements.md 초안")
+
+
+REPORT_HEAD = {   # 교재의 보고서 문항 절 제목 → 보고서 종류
+    "prelab": r"(?:모의\s*실험\s*보고서|예비\s*(?:실험\s*)?보고서|Pre-?lab(?:\s*report)?)",
+    "report": r"(?:(?<!모의)(?<!모의\s)실험\s*보고서|결과\s*보고서|Lab\s*report)",
+}
+CHAPTER_RE = re.compile(r"(?im)^\s*(?:제\s*)?(?:실험|Experiment|Lab)\s*(\d{1,2})(?:\s*장)?(?:\s*[.:\-]|\s+[가-힣A-Za-z(])")
+END_RE = re.compile(r"(?im)^\s*(?:참고\s*문헌|References?|부록|Appendix)\s*$")
+# 문항 머리: (1) 1) 1. ① 가. 가) — 줄 첫머리에서만
+ITEM_RE = re.compile(r"(?m)^[ \t\f]*(\(\d{1,2}\)|\d{1,2}\)|\d{1,2}\.(?!\d)|[①-⑳]|[가-하][.)])\s*(?=\S)")
+
+
+def _page_of(text: str, pos: int) -> int:
+    return text.count("\f", 0, pos) + 1
+
+
+def report_sections(text: str, lab: int | None = None) -> dict[str, dict]:
+    """교재 글에서 보고서 문항 절을 찾는다 → {"prelab"|"report": {"page", "chapter", "body", "items": [(id, 글, 쪽)]}}.
+    교재 한 권에 실험이 여러 개면 lab 번호의 장(실험 n) 안의 절을 고른다."""
+    chapters = [(m.start(), int(m.group(1))) for m in CHAPTER_RE.finditer(text)]
+
+    def chapter_at(pos):
+        prev = [n for p, n in chapters if p <= pos]
+        return prev[-1] if prev else None
+
+    heads = []
+    for kind, pat in REPORT_HEAD.items():
+        for m in re.finditer(rf"(?im)^[ \t\f]*(?:(\d+)(?:\.\d+)*\.?\s*)?{pat}\s*(?:문항)?\s*[:：]?[ \t]*$", text):
+            heads.append((m.start(), m.end(), kind, int(m.group(1)) if m.group(1) else None))
+    heads.sort()
+    out: dict[str, dict] = {}
+    for i, (st, en, kind, num) in enumerate(heads):
+        ch = chapter_at(st)
+        if lab is not None and chapters and ch != lab:
+            continue
+        if kind in out:
+            continue
+        stops = [heads[i + 1][0]] if i + 1 < len(heads) else []
+        stops += [p for p, _ in chapters if p > st][:1]
+        m_end = END_RE.search(text, en)
+        if m_end:
+            stops.append(m_end.start())
+        if num is not None:   # "2. 모의 실험 보고서" 다음의 "3. 실험 방법" 같은 같은 층 절 제목에서 끝
+            for m in re.finditer(r"(?m)^[ \t\f]*(\d+)\.[ \t]+(\S[^\n]{0,24})[ \t]*$", text[en:]):
+                if int(m.group(1)) > num and not re.search(r"[.?다라오]$", m.group(2)):
+                    stops.append(en + m.start())
+                    break
+        body = text[en: min(stops) if stops else len(text)]
+        if body.count("\f") > 6:   # 절이 6쪽을 넘으면 제목 인식이 틀린 것 — 앞 6쪽만
+            body = "\f".join(body.split("\f")[:7])
+        items = []
+        marks = list(ITEM_RE.finditer(body))
+        if marks:   # 첫 문항 머리와 같은 모양만 문항으로 (하위 번호는 문항 글에 남긴다)
+            shape = re.sub(r"\d+", "0", re.sub(r"[①-⑳]", "①", re.sub(r"[가-하]", "가", marks[0].group(1))))
+            top = [m for m in marks if re.sub(r"\d+", "0", re.sub(r"[①-⑳]", "①", re.sub(r"[가-하]", "가", m.group(1)))) == shape]
+            for k, m in enumerate(top):
+                seg = body[m.end(): top[k + 1].start() if k + 1 < len(top) else len(body)]
+                seg = re.sub(r"[ \t]+", " ", re.sub(r"\s*\n\s*", " ", seg.replace("\f", " "))).strip()
+                items.append((m.group(1), seg, _page_of(text, en + m.start())))
+        out[kind] = {"page": _page_of(text, en), "chapter": ch, "body": body.strip(), "items": items}
+    return out
+
+
+def requirements_yaml(sections: dict[str, dict], source: str) -> str:
+    """requirements.yaml 초안 (범위는 provisional, 문항은 missing) — 원문과 대조해 confirmed로 바꾼다"""
+    data = {"scope": {}, "items": []}
+    for kind, sec in sections.items():
+        last = max([sec["page"]] + [p for *_, p in sec["items"]])
+        data["scope"][kind] = {"status": "provisional", "source": source,
+                               "locator": f"p.{sec['page']}" + (f"–{last}" if last > sec["page"] else "")
+                                          + (f" 실험 {sec['chapter']}" if sec["chapter"] else "")}
+        for iid, txt, page in sec["items"]:
+            data["items"].append({"id": iid, "kind": kind, "source": source,
+                                  "locator": f"p.{page} {iid} {txt[:60]}", "answer": "",
+                                  "status": "missing", "evidence": []})
+    head = "# 자동 추출 초안 — 교재 원문과 대조해 문항·범위를 확인하고 status를 confirmed/answered로 바꾼다\n"
+    return head + yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=200)
+
+
+def textbook_texts(lab_dir: Path) -> list[tuple[Path, str]]:
+    """이 Lab의 guidebook, 없으면 과목 공통 materials/의 교재 글"""
+    out = []
+    for p in [lab_dir / "materials" / "guidebook.txt", *sorted((lab_dir.parent / "materials").glob("textbook*.txt"))]:
+        if p.exists():
+            out.append((p, p.read_text(encoding="utf-8", errors="ignore")))
+    return out
+
+
+def draft_questions(lab_dir: Path, lab: str, write: bool = True) -> dict[str, dict]:
+    """교재의 모의 실험 보고서·실험 보고서 문항 → requirements.yaml 초안 (이미 있으면 건드리지 않고 화면에만)"""
+    for txt_path, text in textbook_texts(lab_dir):
+        secs = report_sections(text, int(lab))
+        if not secs:
+            continue
+        pdf = txt_path.with_suffix(".pdf")
+        try:
+            source = str((pdf if pdf.exists() else txt_path).relative_to(lab_dir))
+        except ValueError:
+            source = str(Path("..") / (pdf if pdf.exists() else txt_path).relative_to(lab_dir.parent))
+        for kind, sec in secs.items():
+            print(f"  · {'모의 실험 보고서(prelab)' if kind == 'prelab' else '실험 보고서(report)'}: "
+                  f"{txt_path.name} p.{sec['page']}, 문항 {len(sec['items'])}개 "
+                  + " ".join(i for i, *_ in sec["items"][:12]))
+        req = lab_dir / "requirements.yaml"
+        if write and not req.exists():
+            req.write_text(requirements_yaml(secs, source), encoding="utf-8")
+            print("  + requirements.yaml 초안 (교재 문항)")
+        return secs
+    return {}
 
 
 def draft_hw(hw_dir: Path, num: str):
@@ -546,6 +677,7 @@ def main():
     ap.add_argument("--lab", help="Lab 번호 강제 지정 (예: 01)")
     ap.add_argument("--root", type=Path)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--questions", metavar="NN", help="교재에서 Lab NN의 모의 실험 보고서·실험 보고서 문항을 뽑아 requirements.yaml 초안을 만든다 (교재를 나중에 올렸을 때)")
     a = ap.parse_args()
 
     root = (a.root or find_root(Path.cwd())).resolve()
@@ -553,6 +685,15 @@ def main():
     if (root / "profile.yaml").exists():
         PROFILE.update(yaml.safe_load((root / "profile.yaml").read_text(encoding="utf-8")) or {})
     forced = f"{int(a.lab):02d}" if a.lab else None
+    if a.questions:
+        if not a.course:
+            sys.exit("✗ --questions는 --course와 같이 준다 (예: --course circuit --questions 03)")
+        unit = str(course_defaults(a.course).get("unit", "lab"))
+        ld = root / "courses" / a.course / f"{unit}{int(a.questions):02d}"
+        ld.mkdir(parents=True, exist_ok=True)
+        if not draft_questions(ld, f"{int(a.questions):02d}", write=not a.dry_run):
+            print("교재 글에서 '모의 실험 보고서'·'실험 보고서' 절을 못 찾음 — 교재 PDF를 inbox에 올리거나 해당 쪽을 직접 읽는다")
+        return
 
     if a.files:
         if not a.course:

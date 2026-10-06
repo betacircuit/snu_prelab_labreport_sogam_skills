@@ -112,13 +112,28 @@ SAVE_FIGS = ("__h = findall(0, 'type', 'figure'); "
              "print(__h(__i), fullfile('{figs}', sprintf('fig%d.png', __n)), '-dpng', '-r200'); end")
 
 
+# 그림 수치 요약: 결과 사진에서 읽은 값(축 범위, 봉우리, 곡선 수)을 대조하는 용도. 보고서에는 넣지 않는다
+FIG_DATA = ("__fid = fopen('{out}', 'w'); __h = findall(0, 'type', 'figure'); "
+            "for __i = 1:numel(__h), __n = __h(__i); if isobject(__n), __n = get(__n, 'Number'); end; "
+            "__ax = flipud(findall(__h(__i), 'type', 'axes')); "   # 만든 순서 (subplot 위 칸부터)
+            "for __k = 1:numel(__ax), __a = __ax(__k); if strcmpi(get(__a, 'Tag'), 'legend'), continue; end; __xl = get(__a, 'XLim'); __yl = get(__a, 'YLim'); "
+            "__L = findall(__a, 'type', 'line'); __q = findall(__a, 'type', 'hggroup'); "
+            "fprintf(__fid, 'figure %d axes %d: xlim [%g, %g], ylim [%g, %g], lines %d, other %d\\n', __n, __k, __xl(1), __xl(2), __yl(1), __yl(2), numel(__L), numel(__q)); "
+            "for __m = 1:numel(__L), __x = get(__L(__m), 'XData'); __y = get(__L(__m), 'YData'); __nm = get(__L(__m), 'DisplayName'); "
+            "if isempty(__y) || ~isnumeric(__y), continue; end; [__y1, __i1] = max(__y(:)); [__y0, __i0] = min(__y(:)); "
+            "fprintf(__fid, '  line %d \"%s\": %d points, max %.4g at x = %.4g, min %.4g at x = %.4g\\n', __m, __nm, numel(__y), __y1, __x(__i1), __y0, __x(__i0)); "
+            "end; end; end; fclose(__fid);")
+
+
 def run(path: Path, figs: Path | None = None, timeout: int = 600) -> int:
-    """MATLAB 또는 Octave로 실행한다. 그림은 figs/figN.png (N = figure 번호), 출력은 code/run.log"""
+    """MATLAB 또는 Octave로 실행한다. 그림은 figs/figN.png (N = figure 번호), 출력은 code/run.log,
+    그림 수치 요약(축 범위, 선마다 최댓값·최솟값 위치)은 code/figdata.txt — 사진 판독 대조용"""
     path = path.resolve()
     figs = (figs or path.parent.parent / "figs").resolve()
     figs.mkdir(parents=True, exist_ok=True)
     save = SAVE_FIGS.format(figs=figs.as_posix())
-    body = f"cd('{path.parent.as_posix()}'); run('{path.name}'); {save}"
+    data = path.parent / "figdata.txt"
+    body = f"cd('{path.parent.as_posix()}'); run('{path.name}'); {save}; {FIG_DATA.format(out=data.as_posix())}"
     if find_tool("matlab"):
         cmd, who = [find_tool("matlab"), "-batch", body], "MATLAB"
     elif find_tool("octave-cli") or find_tool("octave"):
@@ -133,6 +148,9 @@ def run(path: Path, figs: Path | None = None, timeout: int = 600) -> int:
     log.write_text(r.stdout + ("\n--- stderr ---\n" + r.stderr if r.stderr.strip() else ""), encoding="utf-8")
     pngs = sorted(figs.glob("fig*.png"))
     print(f"{'✓' if r.returncode == 0 else '✗'} {who} 실행 (종료 코드 {r.returncode}) — 출력 {log}, 그림 {len(pngs)}개 → {figs}")
+    if data.exists():
+        print(f"  그림 수치 요약 {data.name} — 결과 사진에서 읽은 축 범위·극값·곡선 수와 대조한다 (보고서에는 사진 값만)")
+        print("    " + "\n    ".join(data.read_text(encoding="utf-8", errors="replace").splitlines()[:20]))
     if r.returncode != 0:
         print(r.stderr.strip()[-1500:] or r.stdout.strip()[-1500:])
     elif who == "Octave":

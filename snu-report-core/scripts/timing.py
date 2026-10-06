@@ -15,6 +15,10 @@ spec.yaml 예:
   delay:              # 칸 단위 전파 지연 표시 (선택, 소수 가능)
     F: 0.15
   marks: [2, 4]       # 세로 점선 (선택)
+  clock: CLK          # 이 신호의 에지마다 세로 점선 (선택, edge: rise | fall — 기본 rise)
+
+순차 회로는 circuit_kit의 c.verify_seq(...) 결과를 c.timing(trace, [...], "figs/x.png")로 그리면
+그림의 회로에서 계산한 파형이 그대로 들어간다 (figures.md "블록과 순차 회로").
 
 --json 을 주면 expected.json 의 "waveforms" 에 계산된 파형을 저장 → compare.py 가 사용.
 """
@@ -87,7 +91,13 @@ def draw(sig, spec, out):
         ax.text(-0.25 * step, y0 + 0.4, name, ha="right", va="center", fontsize=10, family="monospace")
     for i in range(n + 1):
         ax.axvline(i * step, color="#EEEEEE", lw=0.6, zorder=0)
-    for m in spec.get("marks", []) or []:
+    marks = list(spec.get("marks", []) or [])
+    ck = spec.get("clock")
+    if ck in sig:   # clock 에지마다 점선
+        want = (1, 0) if spec.get("edge") == "fall" else (0, 1)
+        v = sig[ck]
+        marks += [i for i in range(1, len(v)) if (v[i - 1], v[i]) == want]
+    for m in marks:
         ax.axvline(m * step, color="#888", lw=0.8, ls="--")
     unit = spec.get("unit", "")
     ax.set_xticks([i * step for i in range(n + 1)])

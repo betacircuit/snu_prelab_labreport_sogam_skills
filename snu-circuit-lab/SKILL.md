@@ -24,7 +24,10 @@ Codex에서도 Claude 원본의 기능과 양식을 유지하되 사용자 수�
 | 회로도 | `circuit_kit.Circuit`에 schemdraw 소자(`Resistor`, `Capacitor`, `Inductor`, `SourceV`, `SourceSin`, `Ground`, `Opamp`)를 `add`로 그린다. 흑백, 노드 이름은 점 옆 (figures.md) |
 | 이론값 | 노드·메시 해석, 테브난·노턴 등가, RC·RL·RLC 과도 응답, 주파수 응답은 sympy·numpy 스크립트로 풀고 결과만 수식으로 옮긴다 (기호식 → 대입 → 결과) |
 | LTspice 시뮬레이션 | `references/ltspice.md`: 넷리스트·모델 검증 → LTspice 배치 수치 확인 → computer-use로 회로·Run·파형·축 확인 → 포인터 없는 이미지 저장. MCP는 보조 도구 |
-| 파형·주파수 그래프 | matplotlib 흑백 (figures.md). 보드 선도는 로그 축 |
+| 파형 그래프 | `spice.py plot` 또는 matplotlib 흑백 (figures.md) |
+| 보드 선도·주파수 응답 표 | `python $E/bode.py plot --tf "<전달 함수>" -p R=1k,C=100n --sim out.raw:v(out) --meas data/bode.csv --mark-3db -o figs/bode.png` — 이론(검은 실선)·LTspice(밑에 깔린 굵은 회색 띠)·측정(빈 원)을 한 그림에, 위상은 이어지게. 표는 `bode.py table --at 100,1k,10k` |
+| 페이저도 | `python $E/bode.py phasor "V_s=1∠0" "V_R=0.8∠-37" -o figs/phasor.png` (각도는 °) |
 | 측정값 | 멀티미터, 오실로스코프, 함수 발생기 값은 `report/evidence.yaml`에 기록하고, 이론값과의 차이·오차율은 `derived`로 계산한다 |
+| 수식·기호 표기 | `references/notation.md` — 페이저·$j$·dB·$V_{pp}$/$V_{rms}$, 위상은 $\tan^{-1}$ + 구간 나눔. atan2·numpy 같은 계산 프로그램 함수 이름은 보고서에 쓰지 않는다 (빌드가 `[표기]`로 멈춘다) |
 | 자주 하는 실수 | 이 폴더의 `references/mistakes.md` + 엔진의 공통 `references/mistakes.md` — 쓰기 전에 확인 (ω/f 혼동, RMS·Vpp, 50 Ω 출력, 프로브 접지, SPICE `M`·`F` 접두사 …) |
 | 부품값 | 공칭값과 실측값을 구분한다 (예: 공칭 1 kΩ, 실측 0.987 kΩ). 실측값으로 계산했다면 실험 방법에 밝힌다 |

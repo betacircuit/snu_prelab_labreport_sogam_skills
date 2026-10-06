@@ -127,6 +127,61 @@ def _eval_gate(kind: str, xs: list[int]) -> int:
     return int(base) ^ (kind in ("NAND", "NOR", "XNOR"))
 
 
+# ───────────────────────── 블록 (MUX, 디코더, latch, flip-flop) ─────────────────────────
+# 핀: 왼쪽(입력)·오른쪽(출력)은 위에서 아래 순서, 아래쪽(select)은 왼쪽에서 오른쪽 순서
+BLOCKS = {
+    "MUX2": dict(shape="mux", left=["I0", "I1"], bottom=["S"], right=["Y"], chip="74157 (2:1 ×4)", desc="S = 0이면 I0, 1이면 I1"),
+    "MUX4": dict(shape="mux", left=["I0", "I1", "I2", "I3"], bottom=["S1", "S0"], right=["Y"], chip="74153 (4:1 ×2)", desc="S1S0 번째 입력"),
+    "MUX8": dict(shape="mux", left=[f"I{i}" for i in range(8)], bottom=["S2", "S1", "S0"], right=["Y"], chip="74151 (8:1)", desc="S2S1S0 번째 입력"),
+    "DEC2": dict(shape="ic", left=["A1", "A0"], right=["Y0", "Y1", "Y2", "Y3"], chip="74139 (2:4, 출력 active-low)", desc="A1A0 번째 출력만 1"),
+    "DEC3": dict(shape="ic", left=["A2", "A1", "A0"], right=[f"Y{i}" for i in range(8)], chip="74138 (3:8, 출력 active-low)", desc="A2A1A0 번째 출력만 1"),
+    "SRLATCH": dict(shape="ic", left=["S", "R"], right=["Q", "Qn"], seq="level", chip="7402 두 개로 (NOR latch)", desc="S=1 → 1, R=1 → 0, 둘 다 0 → 유지, 둘 다 1 금지"),
+    "DLATCH": dict(shape="ic", left=["D", "EN"], right=["Q", "Qn"], seq="level", chip="7475", desc="EN = 1인 동안 Q = D, 0이면 유지"),
+    "DFF": dict(shape="ic", left=["D", "CLK"], right=["Q", "Qn"], seq="edge", chip="7474 (상승 에지)", desc="clock 에지에서 Q = D"),
+    "JKFF": dict(shape="ic", left=["J", "CLK", "K"], right=["Q", "Qn"], seq="edge", chip="74112 (하강 에지) / 74109", desc="00 유지, 01 reset, 10 set, 11 반전"),
+    "TFF": dict(shape="ic", left=["T", "CLK"], right=["Q", "Qn"], seq="edge", chip="JK의 J = K = T", desc="T = 1이면 에지마다 반전"),
+}
+_PIN_LABEL = {"CLK": ">", "Qn": r"$\overline{Q}$"}
+
+
+def _sel(vals: dict[str, int], names: list[str]) -> int:
+    return int("".join(str(vals[n]) for n in names), 2)
+
+
+def _eval_block(kind: str, opts: dict, v: dict[str, int], q: int | None) -> dict[str, int] | None:
+    """조합 블록과 latch의 출력. q = 지금 상태 (latch·flip-flop). 정해지지 않으면 None"""
+    spec = BLOCKS[kind]
+    en_ok = True
+    if "EN" in v and kind.startswith(("MUX", "DEC")):
+        en_ok = bool(v["EN"]) != bool(opts.get("en_low"))
+    if kind.startswith("MUX"):
+        return {"Y": v[spec["left"][_sel(v, spec["bottom"])]] if en_ok else 0}
+    if kind.startswith("DEC"):
+        k = _sel(v, spec["left"])
+        out = {y: int(en_ok and i == k) for i, y in enumerate(spec["right"])}
+        if opts.get("active_low"):
+            out = {y: 1 - b for y, b in out.items()}
+        return out
+    if kind == "SRLATCH":
+        if v["S"] and v["R"]:
+            return {"Q": 0, "Qn": 0, "_invalid": 1}
+        nq = 1 if v["S"] else 0 if v["R"] else q
+    elif kind == "DLATCH":
+        nq = v["D"] if v["EN"] else q
+    else:   # flip-flop: 에지 사이에는 상태 그대로
+        nq = q
+    return None if nq is None else {"Q": nq, "Qn": 1 - nq}
+
+
+def _next_ff(kind: str, v: dict[str, int], q: int) -> int:
+    if kind == "DFF":
+        return v["D"]
+    if kind == "TFF":
+        return q ^ v["T"]
+    j, k = v["J"], v["K"]
+    return q if not j and not k else 0 if k and not j else 1 if j and not k else 1 - q
+
+
 class CircuitError(Exception):
     pass
 
@@ -289,6 +344,67 @@ class Circuit:
             self.texts.append((center[0], center[1], name, "center", "center", size))
         return g
 
+    def block(self, kind: str, at, name: str | None = None, anchor: str | None = None, *, enable: bool = False,
+              en_low: bool = False, active_low: bool = False, edge: str | None = None, width: float | None = None):
+        """MUX2/4/8, DEC2/3, SRLATCH, DLATCH, DFF, JKFF, TFF 블록. at = anchor 핀 끝 좌표 (기본: 첫 출력 핀).
+        핀 좌표는 c.pin_of(블록, "D")나 블록.absanchors["D"]. 선은 핀 끝에 잇는다 (입력은 왼쪽, select는 아래, 출력은 오른쪽).
+        edge="fall"이면 하강 에지 flip-flop (CLK 핀에 버블). active_low=True면 디코더 출력이 active-low."""
+        from schemdraw.elements import IcPin
+        k = str(kind).upper().replace("-", "").replace("_", "")
+        k = {"D": "DFF", "JK": "JKFF", "T": "TFF", "SR": "SRLATCH", "MUX": "MUX2", "DEC": "DEC2", "DECODER": "DEC2"}.get(k, k)
+        if k not in BLOCKS:
+            raise ValueError(f"블록 종류 '{kind}'를 모름 — {', '.join(BLOCKS)} 중 하나")
+        spec = BLOCKS[k]
+        edge = edge or "rise"
+        left = list(spec["left"]) + (["EN"] if enable else [])
+        sides = {}
+        pins = []
+        lsize = self.name_size - 1
+
+        def lab(p):
+            if p == "EN" and en_low:
+                return r"$\overline{EN}$"
+            if p.startswith("Y") and active_low and k.startswith("DEC"):
+                return rf"$\overline{{Y_{p[1:]}}}$"
+            return _PIN_LABEL.get(p, p)
+
+        for side, names in (("left", left), ("right", spec["right"])):
+            for p in reversed(names):   # schemdraw는 아래에서 위로 놓는다 → 목록 첫 핀이 맨 위
+                pins.append(IcPin(name=lab(p), side=side, anchorname=p, lblsize=lsize,
+                                  invert=(p == "CLK" and edge == "fall")))
+                sides[p] = "L" if side == "left" else "R"
+        for p in spec.get("bottom", []):
+            pins.append(IcPin(name=p, side="bottom", anchorname=p, lblsize=lsize))
+            sides[p] = "B"
+        n = max(len(left), len(spec["right"]))
+        if spec["shape"] == "mux":
+            el = elm.Multiplexer(pins=pins, size=(width or 1.6, n * 0.9 + 0.8), edgepadH=0.5, leadlen=0.35, pinspacing=0.9)
+        else:
+            el = elm.Ic(pins=pins, size=(width or 2.0, n * 0.9 + 0.5), edgepadH=0.45, leadlen=0.35, pinspacing=0.9, lsize=lsize)
+        anc = anchor or spec["right"][0]
+        el = self.add(el.right().at(at).anchor(anc))
+        bp = {p: tuple(float(c) for c in el.absanchors[p]) for p in sides}
+        bb = el.get_bbox(transform=True)
+        lead = 0.35
+        xs_l = [bp[p][0] for p, sd in sides.items() if sd == "L"]
+        xs_r = [bp[p][0] for p, sd in sides.items() if sd == "R"]
+        ys_b = [bp[p][1] for p, sd in sides.items() if sd == "B"]
+        body = (min(xs_l) + lead if xs_l else bb.xmin, max(ys_b) + lead if ys_b else bb.ymin,   # 비스듬한 MUX 아래 변은 가장 높은 점까지만
+                max(xs_r) - lead if xs_r else bb.xmax, bb.ymax)
+        center = ((body[0] + body[2]) / 2, (bb.ymin + bb.ymax) / 2)
+        g = {"kind": k, "name": name or f"U{len(self.gates) + 1}", "el": el, "pins": bp, "center": center, "body": body,
+             "sides": sides, "block": True, "opts": {"en_low": en_low, "active_low": active_low, "edge": edge}}
+        self.gates.append(g)
+        if name:
+            self.texts.append((center[0], bb.ymax + 0.12, name, "center", "bottom", self.name_size))
+        return el
+
+    def pin_of(self, el, pin: str) -> tuple[float, float]:
+        g = next((g for g in self.gates if g["el"] is el), None)
+        if g is None or pin not in g["pins"]:
+            raise KeyError(f"핀 '{pin}' 없음 — 있는 핀: {', '.join(g['pins']) if g else '(블록 아님)'}")
+        return g["pins"][pin]
+
     def node(self, pt, name: str | None = None, where: str = "ne", dot: bool = True, port: str | None = None):
         """이름 붙인 노드. port="in"이면 검증의 입력 변수, "out"이면 출력으로도 쓴다."""
         if dot:
@@ -327,7 +443,9 @@ class Circuit:
                 bb = el.get_bbox(transform=True)
                 box = (bb.xmin, bb.ymin, bb.xmax, bb.ymax)
                 g = next((g for g in self.gates if g["el"] is el), None)
-                if g:
+                if g and g.get("block"):   # 블록은 핀 선(lead)을 뺀 몸체만 — 핀 끝에서 나가는 선이 몸체 관통으로 잡히지 않게
+                    gate_boxes.append((g["body"], g))
+                elif g:
                     gate_boxes.append((box, g))
                 else:
                     terms = [tuple(float(c) for c in v) for k, v in el.absanchors.items()
@@ -387,10 +505,12 @@ class Circuit:
                     if not any(_close(e, q) for e in s):
                         continue
                     other = s[1] if _close(s[0], q) else s[0]
-                    wrong = _horiz(s) and (other[0] > q[0] if pk.startswith("in") else other[0] < q[0])
+                    side = g.get("sides", {}).get(pk) or ("L" if pk.startswith("in") else "R")
+                    wrong = (_horiz(s) and (side == "L" and other[0] > q[0] or side == "R" and other[0] < q[0])) or \
+                            (_vert(s) and (side == "B" and other[1] > q[1] or side == "T" and other[1] < q[1]))
                     if wrong:
                         errs.append(f"게이트 {g['name']}({g['kind']}) {pk}{_fmt(q)}에 선이 몸체 쪽에서 닿음 — "
-                                    f"{'입력은 왼쪽에서' if pk.startswith('in') else '출력은 오른쪽으로'} 연결")
+                                    + {"L": "입력은 왼쪽에서", "R": "출력은 오른쪽으로", "B": "select는 아래에서", "T": "위에서"}[side] + " 연결")
         for box, el, terms in parts:
             for s in segs:
                 if _inside_len(s, box) > EPS * 5:
@@ -411,8 +531,9 @@ class Circuit:
             n_end = sum(1 for q in ends if _close(d, q))
             n_mid = sum(1 for s in segs if _on_interior(d, s))
             named = any(_close(d, q) for q, _ in self.named)
-            if n_mid >= 2:
-                errs.append(f"교차점 {_fmt(d)}에 점 — 네 갈래 연결은 T자 두 개로 나눈다 (점 없는 교차는 연결 아님)")
+            pin_here = sum(1 for g in self.gates for q in g["pins"].values() if _close(d, q))
+            if n_mid >= 2 or n_end + 2 * n_mid + pin_here >= 4:
+                errs.append(f"점 {_fmt(d)}에 선 네 갈래가 모임 — T자 두 개로 나눈다 (분기점을 0.4 이상 떨어뜨린다)")
             elif not named and n_mid == 0 and n_end <= 2 and not any(_close(d, q) for q in junctions):
                 warns.append(f"꺾임·끝 {_fmt(d)}에 점 — 점은 분기점과 이름 붙인 노드에만")
 
@@ -434,6 +555,9 @@ class Circuit:
                     continue
                 bb = t.get_window_extent(renderer).transformed(inv)
                 box = (bb.x0, bb.y0, bb.x1, bb.y1)
+                if any(g.get("block") and gb[0] - EPS <= box[0] and box[2] <= gb[2] + EPS and gb[1] - EPS <= box[1]
+                       and box[3] <= gb[3] + EPS for gb, g in gate_boxes):
+                    continue   # 블록 안의 핀 이름 (D, CLK, Q …)
                 for s in segs:
                     if _inside_len(s, box, pad=0.03) > EPS * 5:
                         errs.append(f"글자 '{t.get_text()}'가 선과 겹침 ({_fmt(s[0])}–{_fmt(s[1])}) — 글자 위치(where) 바꾸기")
@@ -492,7 +616,35 @@ class Circuit:
             names[n] = _norm_name(nm)
             (inputs if side == "in" else outputs).append(_norm_name(nm))
         gates, float_pins = [], []
-        for g in self.gates:
+        # 1) 출력 넷 이름을 먼저 정한다 (뒤에 그린 게이트의 출력이 앞 게이트의 입력이어도 같은 이름이 되게)
+        outs_of: dict[int, dict[str, str]] = {}
+        for gi, g in enumerate(self.gates):
+            opins = BLOCKS[g["kind"]]["right"] if g.get("block") else ["out"]
+            outs_of[gi] = {}
+            for p in opins:
+                n = net_at(g["pins"][p])
+                if n is None:
+                    outs_of[gi][p] = f"{_norm_name(g['name'])}.{p}"   # 쓰지 않은 출력 (예: Q̄)
+                    continue
+                default = (_norm_name(g["name"]) + ("_out" if p == "out" else "." + p)) if n.startswith("n") else n
+                outs_of[gi][p] = names.setdefault(n, default)
+        # 2) 입력
+        for gi, g in enumerate(self.gates):
+            if g.get("block"):
+                spec = BLOCKS[g["kind"]]
+                pin_in = {}
+                for p in g["sides"]:
+                    if p in spec["right"]:
+                        continue
+                    n = net_at(g["pins"][p])
+                    if n is None:
+                        float_pins.append(f"{g['name']}.{p}")
+                        n = f"?{g['name']}.{p}"
+                    pin_in[p] = names.get(n, n)
+                gates.append({"id": g["name"], "type": g["kind"], "in": list(pin_in.values()),
+                              "out": outs_of[gi][spec["right"][0]], "pins_in": pin_in, "pins_out": outs_of[gi],
+                              "opts": g["opts"]})
+                continue
             ins = []
             for k in sorted(k for k in g["pins"] if k.startswith("in")):
                 n = net_at(g["pins"][k])
@@ -500,26 +652,46 @@ class Circuit:
                     float_pins.append(f"{g['name']}.{k}")
                     n = f"?{g['name']}.{k}"
                 ins.append(names.get(n, n))
-            n = net_at(g["pins"]["out"]) or f"{g['name']}.out"
-            names.setdefault(n, _norm_name(g["name"]) + "_out" if n.startswith("n") else n)
-            gates.append({"id": g["name"], "type": g["kind"], "in": ins, "out": names.get(n, n)})
+            gates.append({"id": g["name"], "type": g["kind"], "in": ins, "out": outs_of[gi]["out"]})
         if float_pins:
             raise CircuitError("선이 닿지 않은 게이트 입력: " + ", ".join(float_pins))
         drivers = {}
         for g in gates:
-            if g["out"] in drivers:
-                raise CircuitError(f"게이트 출력끼리 연결됨: {drivers[g['out']]}, {g['id']} → {g['out']}")
-            drivers[g["out"]] = g["id"]
+            for o in (g.get("pins_out") or {"out": g["out"]}).values():
+                if "." in o and o.split(".")[0] == _norm_name(g["id"]) and o not in names.values():
+                    continue   # 이어지지 않은 출력
+                if o in drivers:
+                    raise CircuitError(f"게이트 출력끼리 연결됨: {drivers[o]}, {g['id']} → {o}")
+                drivers[o] = g["id"]
         return {"inputs": inputs, "outputs": outputs, "gates": gates}
 
-    def simulate(self, env: dict[str, int]) -> dict[str, int] | None:
-        """입력값 → 모든 넷 값. 되먹임(래치)이 있어 값이 정해지지 않으면 None"""
-        nl = self.netlist()
+    def simulate(self, env: dict[str, int], state: dict[str, int] | None = None, nl: dict | None = None) -> dict[str, int] | None:
+        """입력값(+ latch·flip-flop 상태) → 모든 넷 값. 되먹임이 진동해 값이 정해지지 않으면 None"""
+        nl = nl or self.netlist()
+        state = state or {}
         val = {k: int(v) for k, v in env.items()}
-        for _ in range(len(nl["gates"]) + 2):
+        self._invalid = set()
+        for _ in range(2 * len(nl["gates"]) + 4):
             changed = False
             for g in nl["gates"]:
-                if all(x in val for x in g["in"]):
+                if "pins_in" in g:
+                    spec = BLOCKS[g["type"]]
+                    if spec.get("seq") == "edge":   # flip-flop 출력은 상태 그대로 (입력과 무관)
+                        q = state.get(g["id"])
+                        outs = None if q is None else {"Q": q, "Qn": 1 - q}
+                    elif all(x in val for x in g["pins_in"].values()):
+                        outs = _eval_block(g["type"], g["opts"], {p: val[n] for p, n in g["pins_in"].items()}, state.get(g["id"]))
+                    else:
+                        continue
+                    if outs is None:
+                        continue
+                    if outs.pop("_invalid", 0):
+                        self._invalid.add(g["id"])
+                    for p, n in g["pins_out"].items():
+                        if p in outs and val.get(n) != outs[p]:
+                            val[n] = outs[p]
+                            changed = True
+                elif all(x in val for x in g["in"]):
                     v = _eval_gate(g["type"], [val[x] for x in g["in"]])
                     if val.get(g["out"]) != v:
                         val[g["out"]] = v
@@ -530,18 +702,157 @@ class Circuit:
             return None
         return val
 
+    def sequence(self, steps: list[dict[str, int]], clock: str = "CLK", init: dict[str, int] | None = None,
+                 quiet: bool = False) -> list[dict]:
+        """순차 회로 시뮬레이션. steps = 클럭 주기마다의 입력값 (CLK 빼고). 주기마다 CLK 0 → 1 → 0.
+        flip-flop은 자기 CLK 핀의 에지에서 바로 앞 값을 받는다 (ripple counter처럼 Q가 다른 FF의 CLK여도 된다).
+        init = {"U1": 0} 처음 상태 (기본 0). → [{"in", "low", "high", "end"}] 각 구간의 모든 넷 값"""
+        nl = self.netlist()
+        blocks = [g for g in nl["gates"] if "pins_in" in g]
+        ffs = [g for g in blocks if BLOCKS[g["type"]].get("seq") == "edge"]
+        latches = [g for g in blocks if BLOCKS[g["type"]].get("seq") == "level"]
+        state = {g["id"]: int((init or {}).get(g["id"], 0)) for g in ffs + latches}
+        clk = _norm_name(clock)
+        if ffs and clk not in nl["inputs"]:
+            raise CircuitError(f"flip-flop이 있는데 클럭 입력 '{clock}'이 없음 — c.pin(pt, '{clock}')")
+        invalid = []
+
+        def settle(env):
+            v = self.simulate(env, state, nl)
+            if v is None:
+                raise CircuitError(f"값이 정해지지 않음 (진동) — 입력 {env}")
+            invalid.extend(self._invalid)
+            for g in latches:
+                q = v.get(g["pins_out"]["Q"])
+                if q is not None and g["id"] not in self._invalid:
+                    state[g["id"]] = q
+            return v
+
+        def advance(env, prev):
+            cur = settle(env)
+            for _ in range(len(ffs) + 2):
+                fired = []
+                for g in ffs:
+                    c0, c1 = prev.get(g["pins_in"]["CLK"]), cur.get(g["pins_in"]["CLK"])
+                    rise = g["opts"].get("edge", "rise") != "fall"
+                    if c0 is not None and c1 is not None and (c0, c1) == ((0, 1) if rise else (1, 0)):
+                        fired.append(g)
+                if not fired:
+                    break
+                for g in fired:   # 에지 바로 앞의 입력을 받는다
+                    ins = {p: prev.get(n) for p, n in g["pins_in"].items() if p != "CLK"}
+                    if None in ins.values():
+                        raise CircuitError(f"{g['id']} 입력이 정해지지 않음: {ins}")
+                    state[g["id"]] = _next_ff(g["type"], ins, state[g["id"]])
+                prev, cur = cur, settle(env)
+            return cur
+
+        trace = []
+        prev = None
+        for st in steps:
+            env = {_norm_name(k): int(v) for k, v in st.items()}
+            if ffs:
+                low_env = {**env, clk: 0}
+                low = advance(low_env, prev or settle(low_env))
+                high = advance({**env, clk: 1}, low)
+                end = advance(low_env, high)
+            else:
+                low = high = end = advance(env, prev or settle(env))
+            trace.append({"in": env, "low": low, "high": high, "end": end})
+            prev = end
+        if invalid and not quiet:
+            print("  ⚠ SR latch에 S = R = 1 (금지 입력):", ", ".join(sorted(set(invalid))))
+        return trace
+
+    def verify_seq(self, steps: list[dict[str, int]], expect: dict[str, list[int]], clock: str = "CLK",
+                   init: dict[str, int] | None = None, kinds: dict[str, str] | None = None, quiet: bool = False) -> list[dict]:
+        """순차 회로 검증: 주기마다 입력을 넣고 한 주기가 끝난 뒤(end) 출력이 expect와 같은지.
+        expect = {"Q1": [0, 1, 1, 0], ...} (steps와 같은 길이)"""
+        nl = self.netlist()
+        errs = []
+        by_id = {g["id"]: g for g in nl["gates"]}
+        for gid, k in (kinds or {}).items():
+            got = by_id.get(gid, {}).get("type")
+            want = k.upper() if k.upper() in BLOCKS else canon_kind(k)
+            if got != want:
+                errs.append(f"{gid}: 본문은 {want} — 그림은 {got}")
+        trace = self.sequence(steps, clock, init, quiet)
+        rows = []
+        for out, seq in expect.items():
+            o = _norm_name(out)
+            if len(seq) != len(steps):
+                errs.append(f"{out}: 기대값 {len(seq)}개, 주기 {len(steps)}개")
+                continue
+            for i, (t, e) in enumerate(zip(trace, seq)):
+                got = t["end"].get(o)
+                if got is None:
+                    errs.append(f"{out}가 그림에 없음")
+                    break
+                if got != int(e):
+                    rows.append(f"주기 {i + 1} ({' '.join(f'{k}={v}' for k, v in t['in'].items())}): {out} 그림 {got} / 기대 {e}")
+        if rows:
+            errs.append(f"순서 불일치 {len(rows)}곳:\n    " + "\n    ".join(rows[:8]))
+        if not quiet:
+            outs = list(expect)
+            print("  순차 검증 — 주기별 " + ", ".join(outs) + ": "
+                  + " | ".join("".join(str(t["end"].get(_norm_name(o), "?")) for o in outs) for t in trace))
+        if errs:
+            raise CircuitError("순차 회로 검증 실패\n  - " + "\n  - ".join(errs))
+        if not quiet:
+            print(f"  ✓ 순차 회로 검증 통과 ({len(steps)}주기)")
+        return trace
+
+    def state_table(self, inputs: list[str], clock: str = "CLK") -> str:
+        """flip-flop 상태 × 입력 → 다음 상태·출력 표 (markdown). FSM·counter 보고서의 상태표 확인용"""
+        nl = self.netlist()
+        ffs = [g for g in nl["gates"] if "pins_in" in g and BLOCKS[g["type"]].get("seq") == "edge"]
+        if not ffs:
+            raise CircuitError("flip-flop이 없음")
+        ids = [g["id"] for g in ffs]
+        q_names = [g["pins_out"]["Q"] for g in ffs]
+        ins = [_norm_name(x) for x in inputs]
+        head = "| " + " ".join(q_names) + (" | " + " ".join(ins) if ins else "") + " | 다음 " + " ".join(q_names) + " |"
+        lines = [head, "|" + "---|" * (3 if ins else 2)]
+        for qs in itertools.product([0, 1], repeat=len(ids)):
+            for xs in itertools.product([0, 1], repeat=len(ins)):
+                t = self.sequence([dict(zip(ins, xs))], clock, dict(zip(ids, qs)), quiet=True)[0]
+                nxt = "".join(str(t["end"][q]) for q in q_names)
+                lines.append(f"| {''.join(map(str, qs))}" + (f" | {''.join(map(str, xs))}" if ins else "") + f" | {nxt} |")
+        return "\n".join(lines)
+
+    def timing(self, trace: list[dict], signals: list[str], out, clock: str = "CLK", edge_marks: bool = True):
+        """sequence() 결과를 타이밍도로 (한 주기 = CLK 0 칸 + CLK 1 칸). timing.py 그림 형식"""
+        import timing as _t
+        clk = _norm_name(clock)
+        sig = {}
+        for name in signals:
+            n = _norm_name(name)
+            if n == clk:
+                sig[name] = [0, 1] * len(trace)
+                continue
+            vals = []
+            for t in trace:
+                for ph in ("low", "high"):
+                    v = t[ph].get(n)
+                    vals.append("x" if v is None else v)
+            sig[name] = vals
+        spec = {"marks": [2 * i + 1 for i in range(len(trace))] if edge_marks and any(_norm_name(s) == clk for s in signals) else []}
+        _t.draw(sig, spec, out)
+        return out
     def verify(self, expected: dict[str, str], kinds: dict[str, str] | None = None, quiet: bool = False) -> bool:
         """그림에서 뽑은 회로가 기대 식과 같은지 진리표 전체로 비교한다.
         expected: {"Y": "~(A & B)"}  (이름은 pin/node 이름, 식 문법은 logic.py와 같음: ~ & | ^)
         kinds:    {"N1": "NOR"}      본문에 쓴 게이트 종류와 그림이 같은지 (NOR ↔ XOR 혼동 방지)"""
         nl = self.netlist()
+        if any("pins_in" in g and BLOCKS[g["type"]].get("seq") for g in nl["gates"]):
+            raise CircuitError("latch·flip-flop이 있는 순차 회로 — c.verify_seq(주기별 입력, 기대 출력)으로 검증한다")
         errs = []
         by_id = {g["id"]: g for g in nl["gates"]}
         for gid, k in (kinds or {}).items():
-            want = canon_kind(k)
+            want = k.upper() if k.upper() in BLOCKS else canon_kind(k)
             got = by_id.get(gid, {}).get("type")
             if got != want:
-                errs.append(f"게이트 {gid}: 본문은 {want}({GATE_INFO[want][1]}) — 그림은 {got}")
+                errs.append(f"게이트 {gid}: 본문은 {want}({GATE_INFO[want][1] if want in GATE_INFO else BLOCKS[want]['desc']}) — 그림은 {got}")
         ins = nl["inputs"]
         if not ins:
             raise CircuitError("입력이 없음 — c.pin(pt, 'A') 또는 c.node(pt, 'A', port='in')으로 입력을 표시")
@@ -563,11 +874,12 @@ class Circuit:
                 if val[out] != exp:
                     rows.append(f"{' '.join(f'{k}={v}' for k, v in env.items())}: {out} 그림 {val[out]} / 기대 {exp}")
         if seq:
-            errs.append("되먹임이 있어 입력만으로 값이 정해지지 않음 — 순차 회로는 timing.py로 따로 확인")
+            errs.append("feedback이 있어 입력만으로 값이 정해지지 않음 — 순차 회로는 블록(c.block('DFF' …))으로 그리고 c.verify_seq로 확인")
         if rows:
             errs.append(f"진리표 불일치 {len(rows)}행:\n    " + "\n    ".join(rows[:8]))
         if not quiet:
-            print("  회로 검증 — 게이트:", ", ".join(f"{g['id']} {g['type']}({len(g['in'])}입력, {GATE_INFO[g['type']][0] or '-'})" for g in nl["gates"]))
+            print("  회로 검증 — 게이트:", ", ".join(f"{g['id']} {g['type']}({len(g['in'])}입력, "
+                                                 f"{(GATE_INFO[g['type']][0] if g['type'] in GATE_INFO else BLOCKS[g['type']]['chip']) or '-'})" for g in nl["gates"]))
             print("               입력:", ", ".join(ins), "/ 확인한 출력:", ", ".join(want))
         if errs:
             raise CircuitError("회로 검증 실패\n  - " + "\n  - ".join(errs))

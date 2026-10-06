@@ -23,6 +23,7 @@ Claude와 Codex는 같은 원고 규칙·계산 도구·서식 원본을 쓴다.
 | 글꼴, 크기, 여백, 제목 블록, 절 번호 모양 | `templates/style.yaml` (한 곳) |
 | 서식 규칙 설명 (표·그림·수식) | `references/format.md` |
 | 문체, 쓰지 않는 표현 | `references/writing.md` (+ 검사 목록 `scripts/style_check.py`의 `BANNED`) |
+| 용어 표준 (영어로 쓸 말 / 한국어로 쓸 말) | `references/terms.md` (표 한 곳, `proof.py`가 읽는다) |
 | 오탈자 검사 목록 (맞춤법, 게이트 이름) | `scripts/proof.py`의 `COMMON`, `GATES`, `CHIP_FUNC` |
 | 회로도 규칙과 검사 | `references/figures.md`, `scripts/circuit_kit.py` |
 | 모든 과목 공통 실수 | `references/mistakes.md` |
@@ -45,6 +46,7 @@ Claude와 Codex는 같은 원고 규칙·계산 도구·서식 원본을 쓴다.
 | `references/setup.md` | 처음 설정: 사용자에게 물을 최소 정보와 저장 방법 |
 | `references/format.md` | 서식 규칙 (첫 쪽, 글꼴, 표, 그림, 수식, 번호) |
 | `references/writing.md` | 문체 (쓰지 않는 표현, 용어, 수식 배치, 실험 방법·오차 분석 쓰는 법) |
+| `references/terms.md` | **용어 표준**: 영어로 쓸 말(feedback, offset, flip-flop …)과 한국어로 쓸 말(이득, 위상 …) |
 | `references/evidence.md` | 데이터와 근거 (만들지 않을 것, 묻기 전에 판단할 것, 근거표) |
 | `references/figures.md` | 회로도와 그래프 그리는 법, NOR/XOR 구분, **회로 검증 순서** |
 | `references/mistakes.md` | 모든 과목 공통 실수와 막는 법. 과목별 실수는 과목 스킬의 `references/mistakes.md` (쓰기 전에 둘 다 읽는다) |
@@ -122,10 +124,11 @@ Claude와 Codex는 같은 원고 규칙·계산 도구·서식 원본을 쓴다.
 | `style_check.py` | 문체 검사: 어미·문장 시작·구절 반복, 같은 서술어 반복(어휘), 접속어·추측 남용, 본문 굵은 글씨, 기타 절 분량 (build.py가 자동 실행) |
 | `docx_post.py` | 표 캡션 행, 그림 틀, 열 너비, 문단 앞 공백, `-` 목록, 한글-영문 자동 간격 끄기, Word 호환 모드 해제 (build.py가 호출) |
 | `ooxml_order.py` | 저장 직전 OOXML 스키마 순서 정리 — Word 호환성 검사 경고·"읽을 수 없는 내용" 방지 |
-| `circuit_kit.py` | 회로도(게이트 이름 중앙, 노드 이름 점 옆), 그래프 막대 스타일. `save()`가 선 겹침·간격·관통·점을 검사하고, `verify()`가 그림의 넷리스트를 기대 식과 진리표로 비교 |
+| `circuit_kit.py` | 회로도(게이트 이름 중앙, 노드 이름 점 옆), 그래프 막대 스타일. `save()`가 선 겹침·간격·관통·점을 검사하고, `verify()`가 그림의 넷리스트를 기대 식과 진리표로 비교. `block()`으로 MUX·decoder·latch·flip-flop, `verify_seq()`·`state_table()`·`timing()`으로 순차 회로 검증 |
 | `logic.py` | 진리표, SOP/POS 최소화, K-map, 넷리스트 |
 | `pinmap.py` | 넷리스트 → 74xx 칩·핀 배선표 (`--nand-only`) |
 | `timing.py`, `scope.py`, `compare.py` | 예상 파형, 스코프 CSV 측정, 진리표 비교 |
+| `bode.py` | 전달 함수 식으로 보드 선도(이론·LTspice·측정 겹침, −3 dB 표시), 주파수 응답 표, 페이저도 |
 | `spice.py` | SPICE 넷리스트 공통 문법 검사(`lint`), ngspice 실행·`.meas`(`run`), 파형·보드 선도(`plot`), 값 읽기(`value`), 연결표(`nodes`). LTspice raw도 읽는다 |
 | `make_template.py` | style.yaml → reference.docx |
 | `mcode.py` | MATLAB 과제 코드 검사(`check`: 파일 이름, 첫 줄 `clc; clear;`, 영어 주석, 문제 절), 실행(`run`: MATLAB 없으면 Octave, 그림 PNG 저장), 제출 zip(`pack`) |

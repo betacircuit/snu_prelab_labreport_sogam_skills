@@ -21,10 +21,10 @@
 | 전원 레일이 보드 가운데에서 끊긴 것을 모름 | 레일 양쪽을 점퍼로 잇는다. 동작이 안 되면 먼저 레일 전압을 잰다 |
 | LED 전류 제한 저항 빠뜨림, LED 극성 반대 | 긴 다리가 anode. 저항값은 $I_{LED} = \frac{V_{CC} - V_F - V_{OL}}{R}$로 계산 (writing.md 예) |
 | LED가 켜질 때 출력을 반대로 해석 | LED를 $V_{CC}$ 쪽에 달면(TTL은 sink 전류가 커서 흔한 방식) **출력 0일 때 켜진다**. 회로도의 LED 방향과 해석을 맞춘다 |
-| 스위치 입력에 풀업·풀다운 저항이 없음 | 스위치를 열면 입력이 떠 있다. 풀업 저항 + 스위치를 GND로 (열림 = 1, 닫힘 = 0) |
-| 스위치 채터링으로 카운터·플립플롭이 여러 번 넘어감 | 클럭은 함수 발생기나 debounce 회로(SR latch)로. 결과에 이상한 건너뜀이 있으면 원인 후보로 쓴다 |
-| 7-segment 공통 anode/cathode와 디코더 짝이 틀림 | 7447 = active-low 출력, 공통 anode용. 7448 = 공통 cathode용 |
-| 전원 decoupling 커패시터 생략 | 칩 전원 핀 가까이 0.1 µF. 글리치가 많으면 원인 후보 |
+| 스위치 입력에 pull-up·pull-down 저항이 없음 | 스위치를 열면 입력이 떠 있다. pull-up 저항 + 스위치를 GND로 (열림 = 1, 닫힘 = 0) |
+| 스위치 채터링으로 counter·flip-flop이 여러 번 넘어감 | clock은 함수 발생기나 debounce 회로(SR latch)로. 결과에 이상한 건너뜀이 있으면 원인 후보로 쓴다 |
+| 7-segment 공통 anode/cathode와 decoder 짝이 틀림 | 7447 = active-low 출력, 공통 anode용. 7448 = 공통 cathode용 |
+| 전원 decoupling 커패시터 생략 | 칩 전원 핀 가까이 0.1 µF. glitch가 많으면 원인 후보 |
 
 ## 측정 (오실로스코프·함수 발생기)
 | 실수 | 막는 법 |
@@ -49,12 +49,15 @@
 | hazard 원인을 "게이트가 느려서"로만 씀 | 경로마다 단 수가 달라 같은 입력 변화가 다른 시각에 도착한다. static-1 hazard는 consensus 항을 더해 없앤다 (`- $B = 1$일 때: …` 경우 나누기) |
 | MUX select 순서 (S1이 MSB), enable이 active-low인 것을 모름 | 74151 strobe $\overline{G}$ = 0이어야 동작, 출력 Y와 W = $\overline{Y}$. 74153도 enable active-low |
 | 74138 enable 미연결로 출력이 전부 1 | G1 = 1, $\overline{G2A}$ = $\overline{G2B}$ = 0. 출력은 active-low |
-| latch와 flip-flop 혼동 | latch는 레벨, flip-flop은 에지. 타이밍도에서 출력이 바뀌는 시점을 맞춘다 (`timing.py`) |
+| latch와 flip-flop 혼동 | latch는 레벨, flip-flop은 에지. 타이밍도에서 출력이 바뀌는 시점을 맞춘다. 도구: `c.verify_seq` → `c.timing` (그린 회로에서 파형을 계산) |
+| 타이밍도에서 Q가 clock 에지가 아닌 곳에서 바뀜, 에지 직후 값을 받음 | flip-flop은 에지 **바로 앞**의 D를 받는다. 손으로 그린 예상 파형은 `c.timing` 결과와 겹쳐 본다 |
+| 상태표·타이밍도의 비트 순서(Q1Q0 / Q0Q1)가 표마다 다름 | 한 순서로 통일하고 표 머리에 적는다. `c.state_table`과 대조 |
+| JK의 J = K = 1(반전)·T flip-flop을 빼먹고 상태표를 씀 | 특성표 4행을 먼저 적고 상태표를 채운다 |
 | SR latch 금지 입력 | NOR latch는 S = R = 1, NAND latch는 $\overline{S} = \overline{R} = 0$ |
 | 74LS74 PRE·CLR을 비워 둠 | active-low라 1에 묶는다. 74LS74는 상승 에지, 74LS76/74LS112 JK는 하강 에지 |
 | 카운터 리셋 핀 처리 | 74LS90·74LS93은 R0(1), R0(2)가 둘 다 1일 때 리셋. 동작시킬 때는 0에 묶는다 |
-| ripple counter 출력의 순간 글리치를 오동작으로 해석 | 단마다 지연이 쌓여 순간 중간값이 생긴다. 동기식과 비교해 설명 |
-| setup·hold 시간 위반 | 입력은 클럭 에지 전 $t_{su}$ 동안 유지. datasheet 값과 함께 쓴다 |
+| ripple counter 출력의 순간 glitch를 오동작으로 해석 | 단마다 지연이 쌓여 순간 중간값이 생긴다. 동기식과 비교해 설명 |
+| setup·hold 시간 위반 | 입력은 clock 에지 전 $t_{su}$ 동안 유지. datasheet 값과 함께 쓴다 |
 | FSM Moore/Mealy 출력 시점 혼동, 안 쓰는 상태 처리 누락 | 상태도에 출력 위치(상태 안/화살표 위)를 표시. 안 쓰는 상태가 초기 상태로 돌아오는지 적는다 |
 | Verilog: 순차 블록에 `=`, 조합 블록에 빠진 경우 (latch 생성) | 순차 `always @(posedge clk)`는 `<=`, 조합 `always @(*)`는 `=`와 default·else를 다 쓴다 |
 | Verilog: 비트 폭 불일치, reset 극성, 보드 스위치·LED의 active 극성 | 포트 폭을 선언과 맞추고, 보드 문서로 극성을 확인한다. 핀 할당(constraints)을 보고서에 표로 |

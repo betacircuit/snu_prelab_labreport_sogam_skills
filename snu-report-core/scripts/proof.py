@@ -295,6 +295,57 @@ META_TALK = [   # (정규식, 이유) — 보고서가 본인이 쓴 글로 읽�
 ]
 
 
+# 보고서 본문은 교재 표기로 쓴다. 계산에 쓴 프로그램의 함수·라이브러리 이름은 쓰지 않는다
+# (기전연 HW에서 본인 코드의 함수를 말할 때만 `atan2`처럼 코드 글꼴로 — 코드 글꼴은 검사하지 않는다)
+CODE_NAMES = (r"(?<![A-Za-z_`])(?:a(?:rc)?tan2|atan|np\.[a-z_]+|numpy|scipy|sympy|matplotlib|linspace|logspace|"
+              r"unwrap|polyfit|lambdify|n?solve\(|fsolve|interp1d?|cmath)(?![A-Za-z_])")
+MATH_NAMES = [   # (원고 수식 속 정규식, 교재 표기)
+    (r"\\(?:operatorname|mathrm|text)\{\s*a(?:rc)?tan2?\s*\}|(?<![A-Za-z\\])a(?:rc)?tan2(?![A-Za-z])", r"\tan^{-1} (구간을 나눠 사분면을 밝힌다)"),
+    (r"\\(?:operatorname|mathrm|text)\{\s*(?:angle|arg|unwrap|abs)\s*\}", r"\angle, |\cdot|"),
+]
+NOTATION_SOFT = [   # (원고 수식 속 정규식, 권장 표기) — 막지는 않는다
+    (r"\\arctan", r"\tan^{-1}"),
+    (r"(?<![A-Za-z\\_^{])i\s*\\omega", "허수 단위는 j ($j\\omega$)"),
+    (r"(?<![0-9])20\s*\\log(?!_)", r"20\log_{10}"),
+]
+
+# 용어: 한국어로 옮겨서 직관적으로 와닿을 때만 번역한다. 기준표는 references/terms.md (그 파일만 고친다)
+TERMS_MD = Path(__file__).resolve().parent.parent / "references" / "terms.md"
+
+
+def load_terms(path: Path = TERMS_MD) -> list[tuple[str, str]]:
+    """terms.md 표의 (쓰지 않는 꼴 정규식, 쓸 말). 긴 꼴부터 (음의 되먹임 → 되먹임)"""
+    if not path.exists():
+        return []
+    out = []
+    for ln in path.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cells) < 2 or not ln.lstrip().startswith("|") or set(cells[0]) <= set("-: ") or cells[0] == "쓸 말":
+            continue
+        for bad in filter(None, (x.strip() for x in cells[1].split(","))):
+            out.append((re.escape(bad).replace(r"\ ", r"\s*"), cells[0]))
+    return sorted(out, key=lambda t: -len(t[0]))
+
+
+TERMS = load_terms()
+
+
+def notation_warnings(md: str) -> list[str]:
+    """원고 수식의 프로그래밍 함수 이름·비교재 표기"""
+    w = []
+    body = re.sub(r"(?s)```.*?```", "", md)
+    body = re.sub(r"`[^`\n]*`", "", body)
+    for m in re.finditer(r"(?s)\$\$(.+?)\$\$|(?<![\\$])\$([^$\n]+)\$", body):
+        e = m.group(1) or m.group(2)
+        for pat, good in MATH_NAMES:
+            if re.search(pat, e):
+                w.append(f"[표기] 수식 ${e.strip()[:40]}$ — 프로그래밍 함수 이름 대신 {good}")
+        for pat, good in NOTATION_SOFT:
+            if re.search(pat, e):
+                w.append(f"[표기 권장] 수식 ${e.strip()[:40]}$ — {good}")
+    return w
+
+
 def check_text(text: str, is_docx: bool = False) -> list[str]:
     w = []
     body = plain(text) if not is_docx else text
@@ -391,6 +442,23 @@ def check_text(text: str, is_docx: bool = False) -> list[str]:
     # 12. 수식 배치 (원고에서만): 문장 속 긴 수식·분수, 한 줄에 식 여러 개
     if not is_docx:
         w += math_layout_warnings(text)
+
+    # 14. 표기: 계산 프로그램의 함수 이름(atan2, numpy …) 대신 교재 표기 (코드 글꼴 `…`은 빼고 본다)
+    for m in re.finditer(CODE_NAMES, prose):
+        ctx = prose[max(0, m.start() - 10): m.end() + 10].replace("\n", " ")
+        w.append(f"[표기] '…{ctx}…' — 프로그래밍 함수·라이브러리 이름을 본문에 쓰지 않는다. "
+                 "위상은 tan⁻¹(구간 나눔)이나 ∠로, 계산 방법은 식으로 보인다")
+    if not is_docx:
+        w += notation_warnings(text)
+
+    # 15. 용어: 번역이 직관적이지 않은 전문 용어는 영어 원문으로
+    taken: list[tuple[int, int]] = []
+    for pat, good in TERMS:   # 긴 꼴(음의 되먹임)이 먼저 — 그 안의 짧은 꼴(되먹임)은 다시 세지 않는다
+        for m in re.finditer(pat, prose):
+            if any(a < m.end() and m.start() < b for a, b in taken):
+                continue
+            taken.append(m.span())
+            w.append(f"[용어] '{m.group(0)}' → {good} (용어 표준: references/terms.md)")
 
     # 11. 빌드 결과 전용
     if is_docx:
