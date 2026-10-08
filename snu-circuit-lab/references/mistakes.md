@@ -1,7 +1,6 @@
 # 자주 하는 실수 — 회로이론 및 실험
 
-공통 실수는 엔진 `snu-report-core/references/mistakes.md`. 쓰기 전에 둘 다 읽고 이번 Lab 주제에 걸리는 항목을 확인한다.
-문항이 그 실수를 묻거나 결과로 드러났을 때만 보고서에 쓴다.
+쓰는 법은 엔진 `references/mistakes.md` 머리말과 같다.
 
 ## 계측기
 | 실수 | 막는 법 |

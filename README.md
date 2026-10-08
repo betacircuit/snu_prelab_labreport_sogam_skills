@@ -114,7 +114,7 @@ snu-circuit-lab/    회이실 — 같은 구성 + references/ltspice.md
 snu-lab-photo/      오실로스코프 사진 — 원근·반사광·대비·선명도 보정, 원본 대조
 snu-em-hw/          기전연 — 같은 구성 + templates/hw.md
 snu-report-core/    공통 엔진: 세 과목이 같이 쓰는 서식·문체·검사·빌드
-├── SKILL.md        작업 순서와 "고칠 곳 지도"
+├── SKILL.md        작업 순서와 "문서와 고칠 곳"
 ├── references/     format, writing, figures, proofreading, mistakes …
 ├── scripts/        build.py, proof.py, circuit_kit.py, mcode.py …
 └── templates/      style.yaml (서식은 여기 한 곳), 원고 뼈대, reference.docx

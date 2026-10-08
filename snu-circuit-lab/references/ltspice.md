@@ -3,18 +3,14 @@
 회로이론 prelab·보고서의 시뮬레이션 그림은 실제 LTspice 출력으로 만든다. `$E`는 공통 엔진의 `scripts/` 폴더다. 측정 사진과 시뮬레이션 그림을 구분한다.
 
 ## 작업 흐름
-1. 현재 과제의 문항·입력·부품·실소자 모델·분석 조건을 먼저 확인한다. 이미 받은 프로필이나 자료를 다시 요구하지 않는다. 스킬 개선 요청에서는 프로필 초기화와 과제 자료 요청을 하지 않는다.
-2. 분석마다 `.cir` 또는 `.asc` 파일을 만든다. 과제 `prelab/sim/` 또는 `report/sim/`에 두고 원문 조건을 기록한다. 이론 모델만으로 실소자 시뮬레이션을 완료했다고 말하지 않는다.
-3. `spice.py lint <파일>`과 `spice.py run <파일>`로 수치를 확인한다. LTspice 배치 실행을 우선하고, ngspice는 호환 가능한 보조 검증에만 쓴다. 과도 응답은 `.meas tran`, AC는 `spice.py value <raw> -t "v(out)" --at 1k`로 읽는다. 이론값과 다른 경우 모델·설정·측정 위치 차이를 설명하거나 수정한다.
-4. **[computer-use 화면 절차](ltspice-computer-use.md)를 읽고 LTspice GUI를 직접 조작한다.** 회로 연결·노드·Run 결과·신호 이름·축 범위를 확인하고 앱 자체 이미지 출력으로 저장한다. MCP가 없다는 이유만으로 새 세션이나 MCP 설치부터 요구하지 않는다. 제공된 Windows computer-use 스킬도 확인하기 전에는 GUI 작업이 불가능하다고 판단하지 않는다.
-5. `.asc`·`.cir`·모델·`.raw`·`.log`와 최종 그림을 함께 보관한다. 보고서용 PNG를 열어 포인터·후광·메뉴·잘린 축이 없고, 채널이 색 또는 선 모양으로 구분되는지 확인한다. 파형과 측정 수치를 `spice.py`로 읽은 값에 대조한다.
-6. 검토한 그림만 `prelab/figs/` 또는 `report/figs/`에 넣고 캡션에 `LTspice 시뮬레이션`이라고 쓴다. 측정값과 비교한 별도 raw 데이터 그래프라면 실제 생성 방식과 시뮬레이터를 밝힌다.
+1. 문항의 입력·부품·실소자 모델·분석 조건을 확인한다. 이론 모델만으로 실소자 시뮬레이션을 끝냈다고 하지 않는다.
+2. 분석마다 `.cir`/`.asc`를 `prelab/sim/` 또는 `report/sim/`에 만든다.
+3. `spice.py lint`와 `spice.py run`으로 수치를 확인한다 (LTspice 배치 우선, ngspice는 보조). 과도 응답은 `.meas tran`, AC는 `spice.py value <raw> -t "v(out)" --at 1k`. 이론값과 다르면 모델·설정·측정 위치를 설명하거나 고친다.
+4. [computer-use 화면 절차](ltspice-computer-use.md)대로 LTspice GUI에서 연결·Run·신호·축을 확인하고 앱 자체 출력으로 저장한다. MCP가 없다고 설치나 사용자 캡처 요청부터 하지 않는다. LTspice MCP는 있으면 파일 생성·배치 실행의 보조로 쓴다. GUI·MCP가 모두 없을 때만 필요한 캡처를 묶어 요청하고 초안은 계속 쓴다.
+5. `.asc`·`.cir`·`.raw`·`.log`와 그림을 함께 보관한다. 그림은 포인터·메뉴·잘린 축이 없고 채널이 구분되는지 열어 보고, `spice.py` 값과 대조한다.
+6. 검토한 그림만 `figs/`에 넣고 캡션에 `LTspice 시뮬레이션`.
 
-## 호스트와 도구 선택
-- **Codex**: 설치된 computer-use 스킬과 현재 API를 따른다. Windows에서는 `node_repl` + `@oai/sky`로 앱을 조작한다. [Codex 실행 흐름](../../snu-report-core/references/runtime-codex.md)을 따른다.
-- **Claude**: 해당 환경의 computer-use를 사용한다. Codex 패키지나 경로를 가정하지 않는다.
-- **LTspice MCP**: 사용 가능하면 파일 생성·모델 확인·배치 실행의 보조 수단으로 쓴다. 사용자가 MCP 방식을 명시하면 그 선택을 따른다. GUI와 연결 도구가 모두 없을 때만 필요한 회로/파형 캡처를 묶어 요청하고, 작성 가능한 초안은 진행한다.
-- **설치**: LTspice 자체가 없을 때 현재 호스트·권한 범위에서 설치한다. MCP 추가가 필요한 요청에만 `bootstrap.py --agent codex|claude --yes`를 사용한다. 다른 AI의 설정은 변경하지 않는다.
+LTspice가 없으면 현재 호스트 권한으로 설치한다. MCP 등록은 요청받았을 때만 `bootstrap.py --agent <codex|claude> --yes`.
 
 ## 공통 문법 (LTspice와 ngspice 모두에서 돌아가는 넷리스트)
 `spice.py lint`가 아래를 검사한다.

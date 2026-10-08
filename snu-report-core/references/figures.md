@@ -1,12 +1,10 @@
 # 그림 그리기
 
-모든 그림은 `courses/<과목>/labNN/{prelab,report}/figs/make_figs.py` 하나에서 만든다 (다시 돌리면 같은 그림).
-본인이 찍어야 하는 사진(스코프 화면, LTspice 캡처, MATLAB 화면)이 아직 없으면 원고에 그림 자리만 두고 `hint="무엇을 찍을지"`를 단다. 초안에는 한 줄 누락 표시만 넣고 촬영 지시는 별도 요청 목록으로 보낸다. 사진이 오면 같은 경로에 넣고 다시 빌드한다. 사진 없이 보고서가 완성됐다고 말하지 않는다.
-흑백만 쓴다 (논설실·회로이론). **기전연 HW는 예외: 사용자 MATLAB 캡처를 컬러 그대로 쓴다** (snu-em-hw). 사용자가 준 그림·캡처가 있으면 다시 그리지 않고 그걸 쓴다. 그림 글자는 본문과 맞춰 고딕: `circuit_kit.TEXT_FAMILY` (맑은 고딕 → Noto Sans CJK KR → DejaVu Sans), 수식 기호는 `dejavusans`.
+그리는 그림은 `{prelab,report}/figs/make_figs.py` 하나에서 만든다 (다시 돌리면 같은 그림). 본인이 찍을 사진이 아직 없으면 그림 자리만 둔다 (엔진 SKILL.md 원고 문법 `hint`).
+흑백만 쓴다. 기전연 MATLAB 화면은 예외로 컬러 그대로. 사용자가 준 그림이 있으면 다시 그리지 않는다. 글자는 본문과 같은 고딕(`circuit_kit.TEXT_FAMILY`).
 
 ## 회로도 — `scripts/circuit_kit.py`
-가이드라인은 손 그림이나 온라인 도구(circuitlab 등)를 허용한다. 이 skill은 schemdraw + `circuit_kit`으로 그린다:
-벡터 품질, 흑백, 수정·재현이 쉽다. 사용자가 circuitlab 파일을 따로 주면 그걸 쓴다.
+schemdraw + `circuit_kit`으로 그린다. 사용자가 circuitlab 파일 등을 주면 그걸 쓴다.
 
 규칙 (사용자 지정)
 - **선은 겹치거나 붙어 가지 않는다.** 나란한 선은 0.3 이상 띄우고, 선은 게이트·소자 몸체를 지나지 않으며, 게이트에는 핀에서만 닿는다.

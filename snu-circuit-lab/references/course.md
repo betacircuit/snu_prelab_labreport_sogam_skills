@@ -8,17 +8,12 @@
 
 | 보고서 | 답할 문항 | 이 skill에서 |
 |---|---|---|
-| prelab (예비보고서) | 교재 각 실험의 **"모의 실험 보고서"** 문항 | `prelab` — 문항마다 절 하나. 시뮬레이션은 LTspice (`ltspice.md`) |
-| lab report (결과보고서) | 교재 각 실험의 **"실험 보고서"** 문항 | `report` — 문항마다 절 하나. 측정값은 `evidence.yaml` |
+| prelab (예비보고서) | 교재 각 실험의 **"모의 실험 보고서"** 문항 | `prelab`, 시뮬레이션은 LTspice (`ltspice.md`) |
+| lab report (결과보고서) | 교재 각 실험의 **"실험 보고서"** 문항 | `report`, 측정값은 `evidence.yaml` |
 
-- **양식 자유.** 서식·문체는 엔진 규칙(format.md, writing.md)을 그대로 쓴다.
-- **문항 답변이 본체다.** 원고에서 교재 문항 번호로 대응을 기록하고(`# 3.2) …`) 그 문항에 답한다. 출력 제목에는 자동 절 번호 하나만 표시한다 (공통 `format.md`). 논설실 Lab00의 "실험 목표, 수행 내용 요약, 토론 및 고찰" 틀을 가져오지 않는다.
-  문항이 요구하지 않는 이론 배경, 실험 목표, 결론 절은 만들지 않는다. 짧은 범위 한두 문장만 둔다.
-- 문항 목록은 `ingest.py`가 교재에서 뽑는다. 교재 한 권(파일명에 "교재"/"textbook", 또는 목차에 실험이 여럿)은 `courses/circuit/materials/textbook.pdf`로 들어가고,
-  Lab 자료가 들어올 때마다 그 실험 장의 "모의 실험 보고서"(prelab)·"실험 보고서"(report) 문항을 쪽 번호와 함께 `labNN/requirements.yaml` 초안으로 만든다.
-  교재를 나중에 올렸으면 `python $E/ingest.py --course circuit --questions NN`.
-- 초안은 `status: provisional`이다. 교재 해당 쪽을 직접 읽어 문항 번호·하위 문항·범위를 대조하고 `confirmed`로 바꾼 뒤 쓴다 (스캔본이라 글이 안 뽑히면 쪽 이미지를 읽어 손으로 채운다).
-  교재가 없으면 사용자에게 교재 해당 쪽을 달라고 한다.
+- 문항마다 절 하나 (`# 3.2) …`). 서식·문체는 엔진 규칙 그대로. 이론 배경, 실험 목표, 결론 절은 문항이 요구할 때만. 맨 앞에 범위 한두 문장.
+- 문항 목록: 교재 한 권(파일명 "교재"/"textbook" 또는 목차에 실험 여럿)은 `materials/textbook.pdf`로 가고, `ingest.py`가 Lab마다 두 절의 문항을 쪽 번호와 함께 `labNN/requirements.yaml` 초안(`provisional`)으로 뽑는다. 교재를 나중에 올렸으면 `--course circuit --questions NN`.
+- 초안은 교재 쪽을 직접 읽어 대조한 뒤 `confirmed`로 바꾼다 (스캔본이면 쪽 이미지를 읽어 채운다). 교재가 없으면 해당 쪽을 달라고 한다.
 
 ## 아직 모르는 것 `[확인 필요]`
 - 제출처, 제출 형식(PDF 여부), 마감 요일·시각
