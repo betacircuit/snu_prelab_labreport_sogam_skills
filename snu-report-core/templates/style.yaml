@@ -31,8 +31,8 @@ title_block:
   report_lines:
     - ["{team}조    {student_id} {name}    (조원: {teammates})", "{team}조    {student_id} {name}", "{student_id} {name}"]
     - "실험일: {lab_date_ko}"
-  hw_title: "{course}\nHW{lab_num} {kind_ko}"
-  hw_subtitle: "{title}"
+  hw_title: "{course}\n실습 {lab_num} 결과보고서"
+  hw_subtitle: ""
   hw_lines:
     - "{student_id} {name}"
   rule: false
@@ -77,7 +77,7 @@ size:
   caption: 10.5
   table: 10
   code: 9
-  math: 10                # 문장 속 수식 (Cambria Math는 같은 pt의 본문보다 커 보여서 1pt 작게)
+  math: 11                # 본문과 동일한 기준 크기; 첨자·분수는 Word가 비율 조정
   math_display: 11        # 따로 한 줄로 뺀 수식
   header_footer: 9
 
@@ -120,3 +120,8 @@ numbering:
   table_prefix: "Table"
   caption_format: "{prefix}.{n} - {text}"   # 캡션: "Table.1 - 캡션", "Fig.1 - 캡션"
   ref_format: "{prefix}.{n}"                # 본문 참조: "Table.1", "Fig.1"
+
+math:
+  op_space: false        # Word 수식의 기본 연산자 간격
+screenshots:
+  line_pitch_pt: 10.5     # line-px를 지정한 코드·명령 창의 공통 줄 간격

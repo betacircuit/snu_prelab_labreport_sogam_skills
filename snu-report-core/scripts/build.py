@@ -195,11 +195,12 @@ def upright_math(expr: str) -> str:
     return "".join(out)
 
 
-def space_all_math(text: str) -> str:
+def space_all_math(text: str, op_space=True) -> str:
+    convert = lambda expr: space_math(upright_math(expr)) if op_space else upright_math(expr)
     parts = re.split(r"(```.*?```)", text, flags=re.S)
     for k in range(0, len(parts), 2):
-        parts[k] = MATH_RE.sub(lambda m: (m.group(0)[:2] + space_math(upright_math(m.group(0)[2:-2])) + m.group(0)[-2:])
-                               if m.group(0).startswith("$$") else "$" + space_math(upright_math(m.group(0)[1:-1])) + "$", parts[k])
+        parts[k] = MATH_RE.sub(lambda m: (m.group(0)[:2] + convert(m.group(0)[2:-2]) + m.group(0)[-2:])
+                               if m.group(0).startswith("$$") else "$" + convert(m.group(0)[1:-1]) + "$", parts[k])
     return "".join(parts)
 
 NBSP = "\u00a0"
@@ -263,7 +264,8 @@ def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
                     h[i] = 0
                 fmts = num.get("heading_formats", ["{0}.", "{0}.{1}", "{0}.{1}.{2}"])
                 n = fmts[lvl - 1].format(*h[:lvl])
-                line = f"{m['hash']} {n} {strip_heading_labels(m['text'])} {attr}".rstrip()
+                heading = re.sub(r"^Problem\s+\d+[.)]?\s+", "", m["text"], flags=re.I)
+                line = f"{m['hash']} {n} {strip_heading_labels(heading)} {attr}".rstrip()
             out.append(line)
             continue
 
@@ -307,8 +309,8 @@ def preprocess(md: str, st: dict) -> tuple[str, list[str]]:
         return labels[key]
 
     text = re.sub(r"@((?:fig|tbl):[A-Za-z0-9_-]+)", ref, text)
-    if st.get("math", {}).get("op_space", True):
-        text = space_all_math(text)
+    # Native OMML operator spacing avoids text-space padding in fractions/scripts.
+    text = space_all_math(text, op_space=st.get("math", {}).get("op_space", False))
     text = nbsp_text(text)
     return text, warnings
 
@@ -423,8 +425,6 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
     src_dir = src.parent
     style_path = style_path or TEMPLATES / "style.yaml"
     st = yaml.safe_load(style_path.read_text(encoding="utf-8"))
-    if kind == "hw":   # 과제는 'Problem 1)'이 곧 절 번호라 자동 번호(1.)를 붙이지 않는다
-        st["numbering"]["heading"] = False
     v = load_vars(lab_dir, kind)
     if "heading_numbering" in v:
         st["numbering"]["heading"] = bool(v["heading_numbering"])
@@ -486,8 +486,8 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
             sys.exit("✗ 기전연 보고서에 글자 코드({{code: …}} 또는 ``` 블록)가 있다 — 코드는 MATLAB 화면 사진(figs/p1_code.png)으로 넣는다")
         # 문제마다 본인이 올린 코드 사진(figs/pN_code…)과 결과 사진(figs/pN_result…)이 있어야 한다
         missing_photos = []
-        for m in re.finditer(r"(?ms)^#\s+Problem\s+(\d+)\b(.*?)(?=^#\s|\Z)", raw):
-            n, sec = m.group(1), m.group(2)
+        from screenshot_layout import homework_sections
+        for n, sec in homework_sections(raw):
             for kind_, label in (("code", "코드 화면"), ("result", "실행 결과")):
                 refs = re.findall(rf"\]\((figs/p{n}_{kind_}[^)\s]*)\)", sec)
                 if not refs:
@@ -509,6 +509,8 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
         if final:
             sys.exit("✗ --final: 사진이 아직 없는 자리가 있다 — 사진을 받아 figs/에 넣고 다시 빌드")
 
+    from screenshot_layout import normalize_screenshots
+    raw = normalize_screenshots(raw, src_dir, lab_dir, st)
     body, warns = preprocess(raw, st)
     for w in warns:
         print("⚠", w, file=sys.stderr)

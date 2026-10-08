@@ -520,13 +520,43 @@ def modern_word(doc) -> int:
 
 
 def math_size(doc, inline_pt: float, display_pt: float) -> int:
-    """수식 글자 크기. Cambria Math는 같은 pt의 맑은 고딕보다 커 보여서 본문보다 조금 작게 둔다.
-    m:r 안에 w:rPr(w:sz)를 넣는다 (OMML 순서: m:rPr → w:rPr → m:t)."""
+    """Set the base size on math runs, structural controls and display paragraph marks.
+    Word still scales native subscripts and fractions; never size them manually."""
     n = 0
     body = doc.element.body
     for om in body.iter(qn("m:oMath")):
         display = om.getparent() is not None and om.getparent().tag == qn("m:oMathPara")
         half = str(int(round((display_pt if display else inline_pt) * 2)))
+        # Fractions, delimiters and scripts inherit from ctrlPr, not only m:r.
+        properties = {"f": "fPr", "d": "dPr", "rad": "radPr", "nary": "naryPr",
+                      "sSub": "sSubPr", "sSup": "sSupPr", "sSubSup": "sSubSupPr",
+                      "eqArr": "eqArrPr", "m": "mPr", "acc": "accPr",
+                      "bar": "barPr", "limLow": "limLowPr", "limUpp": "limUppPr"}
+        controls = []
+        for node in list(om.iter()):
+            prop = properties.get(node.tag.rsplit("}", 1)[-1])
+            if prop:
+                pr = node.find(qn("m:" + prop))
+                if pr is None:
+                    pr = OxmlElement("m:" + prop)
+                    node.insert(0, pr)
+                ctrl = pr.find(qn("m:ctrlPr"))
+                if ctrl is None:
+                    ctrl = OxmlElement("m:ctrlPr")
+                    pr.append(ctrl)
+                controls.append(ctrl)
+        if display:
+            paragraph = next(om.iterancestors(qn("w:p")), None)
+            if paragraph is not None:
+                controls.append(_ppr(paragraph))
+        for ctrl in controls:
+            rpr = ctrl.find(qn("w:rPr"))
+            if rpr is None:
+                rpr = OxmlElement("w:rPr")
+                ctrl.append(rpr)
+            for tag in ("w:sz", "w:szCs"):
+                _set_child(rpr, tag, **{"w:val": half})
+            _set_child(rpr, "w:rFonts", **{"w:ascii": "Cambria Math", "w:hAnsi": "Cambria Math"})
         for r in om.iter(qn("m:r")):
             rpr = r.find(qn("w:rPr"))
             if rpr is None:
