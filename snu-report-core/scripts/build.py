@@ -480,6 +480,14 @@ def build(lab_dir: Path, kind: str, final=False, pdf=False, style_path: Path | N
                 print("  코드 — 본인에게 알릴 것 (코드는 고치지 않는다):", w, file=sys.stderr)
             for w in info:
                 print("  코드 — 참고:", w, file=sys.stderr)
+        from hw_style import prose_issues, comment_issues
+        hw_issues = prose_issues(raw)
+        if code.exists():
+            hw_issues += comment_issues(code.read_text(encoding="utf-8"))
+        for issue in hw_issues:
+            print("  기전연 문체 ⚠", issue, file=sys.stderr)
+        if final and hw_issues:
+            sys.exit("✗ --final: 기전연 본문 표기·주석 맥락을 고친 뒤 다시 빌드한다")
         # 기전연 보고서의 코드는 MATLAB 화면 사진으로만 넣는다 (사용자 지정). 글자 코드는 meta.yaml에 code_text: true일 때만
         text_code = re.search(r"\{\{\s*code\s*:|^```", raw, re.M)
         if text_code and not v.get("code_text"):
