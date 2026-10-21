@@ -94,7 +94,7 @@ W/
 | `timing.py`, `scope.py`, `compare.py` | 예상 파형, 스코프 CSV, 진리표 비교 |
 | `spice.py`, `bode.py` | SPICE 검사·실행·파형, 보드 선도·주파수 응답 표·페이저도 |
 | `mcode.py` | MATLAB 과제 코드 검사·실행·zip |
-| `docx_post.py`, `math_layout.py`, `ooxml_order.py`, `make_template.py` | build.py가 부르는 후처리 |
+| `docx_post.py`, `block_spacing.py`, `math_layout.py`, `ooxml_order.py`, `make_template.py` | build.py가 부르는 후처리 |
 
 그림 스크립트(`make_figs.py`)는 맨 위에서 엔진을 찾는다 (`W/.snu-engine`에 경로가 적혀 있다):
 ```python

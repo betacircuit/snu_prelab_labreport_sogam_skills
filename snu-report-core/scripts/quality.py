@@ -109,6 +109,9 @@ def check_docx(path: Path) -> dict:
     doc = Document(path)
     from math_layout import layout_issues
     errors.extend(layout_issues(doc))
+    if 'Block Spacer' in doc.styles:
+        from block_spacing import gap_issues
+        errors.extend(gap_issues(doc))
     body = doc.element.body
     text = "\n".join(t.text or "" for t in body.iter(qn("w:t")))
     if STATUS.search(text) or "사진 넣을 곳" in text or '⟦미제공:' in text:
