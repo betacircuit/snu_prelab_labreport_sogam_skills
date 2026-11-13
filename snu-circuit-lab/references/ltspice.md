@@ -6,7 +6,7 @@
 1. 문항의 입력·부품·실소자 모델·분석 조건을 확인한다. 이론 모델만으로 실소자 시뮬레이션을 끝냈다고 하지 않는다.
 2. 분석마다 `.cir`/`.asc`를 `prelab/sim/` 또는 `report/sim/`에 만든다.
 3. `spice.py lint`와 `spice.py run`으로 수치를 확인한다 (LTspice 배치 우선, ngspice는 보조). 과도 응답은 `.meas tran`, AC는 `spice.py value <raw> -t "v(out)" --at 1k`. 이론값과 다르면 모델·설정·측정 위치를 설명하거나 고친다.
-4. [computer-use 화면 절차](ltspice-computer-use.md)대로 LTspice GUI에서 연결·Run·신호·축을 확인하고 앱 자체 출력으로 저장한다. MCP가 없다고 설치나 사용자 캡처 요청부터 하지 않는다. LTspice MCP는 있으면 파일 생성·배치 실행의 보조로 쓴다. GUI·MCP가 모두 없을 때만 필요한 캡처를 묶어 요청하고 초안은 계속 쓴다.
+4. [computer-use 화면 절차](ltspice-computer-use.md)대로 LTspice GUI에서 연결·Run·신호·축을 확인하고 요청에 맞춰 실제 화면을 캡처하거나 앱 출력으로 저장한다. MCP가 없다고 설치나 사용자 캡처 요청부터 하지 않는다. LTspice MCP는 있으면 파일 생성·배치 실행의 보조로 쓴다. GUI·MCP가 모두 없을 때만 필요한 캡처를 묶어 요청하고 초안은 계속 쓴다.
 5. `.asc`·`.cir`·`.raw`·`.log`와 그림을 함께 보관한다. 그림은 포인터·메뉴·잘린 축이 없고 채널이 구분되는지 열어 보고, `spice.py` 값과 대조한다.
 6. 검토한 그림만 `figs/`에 넣고 캡션에 `LTspice 시뮬레이션`.
 
